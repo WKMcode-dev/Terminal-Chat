@@ -1,16 +1,22 @@
 # client/messages/messages.py
 import threading
 
-def start_receiving(client_socket):
-    """Inicia uma thread que recebe mensagens do servidor."""
-    def receive_messages():
+class ReceiverThread(threading.Thread):
+    """Thread para receber mensagens do servidor."""
+
+    def __init__(self, client_socket):
+        super().__init__(daemon=True)
+        self.client_socket = client_socket
+
+    def run(self):
         while True:
             try:
-                message = client_socket.recv(1024)
+                message = self.client_socket.recv(1024)
                 if message:
-                    # Exibe mensagem acima do prompt
                     print("\n" + message.decode("utf-8"))
             except:
                 continue
 
-    threading.Thread(target=receive_messages, daemon=True).start()
+def start_receiving(client_socket):
+    """Inicia a thread de recebimento de mensagens."""
+    ReceiverThread(client_socket).start()
