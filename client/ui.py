@@ -12,3 +12,4 @@ def prompt_message(username: str):
     """Prompt interativo para digitar mensagens."""
     with patch_stdout():
         return session.prompt(f"[{username}]: ")
+

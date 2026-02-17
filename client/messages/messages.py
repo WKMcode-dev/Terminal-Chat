@@ -1,6 +1,7 @@
 # client/messages/messages.py
 import threading
 
+
 BUFFER_SIZE = 1024  # tamanho do buffer de recebimento
 
 class ReceiverThread(threading.Thread):

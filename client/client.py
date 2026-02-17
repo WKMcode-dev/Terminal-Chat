@@ -4,6 +4,7 @@ from .connection.message_sender import MessageSender
 from .messages.messages import start_receiving
 from .ui import get_username, prompt_message
 
+
 class ChatClient:
     """Classe principal do cliente de chat."""
 

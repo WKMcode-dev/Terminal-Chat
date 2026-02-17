@@ -11,3 +11,4 @@ class MessageSender:
     def send(self, msg: str):
         """Formata e envia a mensagem via socket."""
         self.client.send(format_message(self.username, msg).encode("utf-8"))
+

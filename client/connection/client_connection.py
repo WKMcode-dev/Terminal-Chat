@@ -9,3 +9,4 @@ def setup_connection():
     client.connect((host, 5000))
 
     return client
+
