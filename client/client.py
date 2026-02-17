@@ -1,32 +1,36 @@
-# client.py
-from prompt_toolkit import PromptSession
-from prompt_toolkit.patch_stdout import patch_stdout
-
+# client/client.py
 from .connection.client_connection import setup_connection
 from .messages.messages import start_receiving
+from .messages.utils import format_message
+from .ui import get_username, prompt_message
 
-# Conectar ao servidor
-client = setup_connection()
+class ChatClient:
+    def __init__(self):
+        self.client = setup_connection()
+        self.username = None
 
-# Perguntar o nome do usuário
-username = input("Digite seu nome: ")
-client.send(username.encode("utf-8"))
+    def login(self):
+        self.username = get_username()
+        self.client.send(self.username.encode("utf-8"))
+        start_receiving(self.client)
+        print(f"Conectado ao servidor. Digite suas mensagens (ou !sair para sair):")
 
-# Inicia thread para receber mensagens do servidor
-start_receiving(client)
+    def send_message(self, msg: str):
+        self.client.send(format_message(self.username, msg).encode("utf-8"))
 
-# Sessão de input interativo
-session = PromptSession()
-print(f"Conectado ao servidor. Digite suas mensagens (ou !sair para sair):")
+    def run(self):
+        self.login()
+        while True:
+            msg = prompt_message(self.username)
 
-while True:
-    with patch_stdout():  # permite que mensagens recebidas não quebrem seu input
-        msg = session.prompt(f"[{username}]: ")
+            if msg.lower() == "!sair":
+                print(f"*** {self.username} saiu do chat! ***")
+                self.client.close()
+                break
 
-    if msg.lower() == "!sair":
-        print(f"*** {username} saiu do chat! ***")
-        client.close()
-        break
+            self.send_message(msg)
 
-    # Envia a mensagem já formatada com [nome]:
-    client.send(f"[{username}]: {msg}".encode("utf-8"))
+# Entry point
+if __name__ == "__main__":
+    chat = ChatClient()
+    chat.run()
