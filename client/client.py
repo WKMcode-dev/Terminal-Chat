@@ -11,6 +11,7 @@ class ChatClient:
         self.client = setup_connection()       # Conexão com o servidor
         self.username = None                   # Nome do usuário
         self.sender = None                     # Envio de mensagens
+        self.receiver_thread = None            # Thread de recebimento
 
     def login(self):
         """Realiza login: pega nome e inicia thread de recebimento."""
@@ -21,7 +22,7 @@ class ChatClient:
         self.sender = MessageSender(self.client, self.username)
 
         # Inicia a thread de recebimento
-        start_receiving(self.client)
+        self.receiver_thread = start_receiving(self.client)
 
         print(f"Conectado ao servidor. Digite suas mensagens (ou !sair para sair):")
 
@@ -41,6 +42,8 @@ class ChatClient:
     def disconnect(self):
         """Encerra a conexão e imprime mensagem de saída."""
         print(f"*** {self.username} saiu do chat! ***")
+        if self.receiver_thread:
+            self.receiver_thread.stop()
         self.client.close()
 
     def run(self):
