@@ -1,9 +1,9 @@
 # client.py
 from prompt_toolkit import PromptSession
 from prompt_toolkit.patch_stdout import patch_stdout
-from connection.connection import connect_to_server  # import da função modularizada
-from .messages.messages import start_receiving       # import do módulo de mensagens
-from .connection.client_connection import setup_connection  # import da função de configuração de conexão do client
+
+from .connection.client_connection import setup_connection
+from .messages.messages import start_receiving
 
 # Conectar ao servidor
 client = setup_connection()
