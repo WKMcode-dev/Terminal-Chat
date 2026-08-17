@@ -1,0 +1,27 @@
+{
+  "name": "@terminal-chat/protocol",
+  "version": "2.1.0",
+  "description": "Contratos compartilhados e validados do Terminal Chat",
+  "main": "dist/index.js",
+  "scripts": {
+    "test": "vitest run",
+    "dev": "tsup src/index.ts --format esm --dts --watch",
+    "build": "tsup src/index.ts --format esm --dts --clean",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "type": "module",
+  "private": true,
+  "types": "dist/index.d.ts",
+  "exports": "./dist/index.js",
+  "dependencies": {
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "tsup": "^8.5.1",
+    "typescript": "~6.0.2",
+    "vitest": "^4.1.10"
+  }
+}

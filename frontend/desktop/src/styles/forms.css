@@ -1,0 +1,219 @@
+.auth-page {
+  display: grid;
+  place-items: center;
+  width: 100vw;
+  min-height: 100vh;
+  padding: 24px;
+  background:
+    radial-gradient(circle at 20% 10%, var(--primary-soft), transparent 30%),
+    radial-gradient(
+      circle at 90% 90%,
+      color-mix(in srgb, var(--secondary) 11%, transparent),
+      transparent 32%
+    ),
+    var(--bg);
+}
+.auth-card {
+  width: min(100%, 410px);
+  padding: 34px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--panel) 94%, transparent);
+  box-shadow: var(--shadow);
+}
+.brand-mark {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  margin-bottom: 24px;
+  border: 1px solid color-mix(in srgb, var(--primary) 40%, var(--border));
+  border-radius: 14px;
+  color: var(--primary);
+  background: var(--primary-soft);
+}
+.auth-card h1 {
+  margin: 7px 0 9px;
+  font-size: 1.75rem;
+  letter-spacing: -0.04em;
+}
+.auth-description {
+  margin-bottom: 24px;
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+form label {
+  display: grid;
+  gap: 7px;
+  margin-bottom: 14px;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+input,
+textarea,
+select {
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  outline: none;
+  color: var(--text);
+  background: var(--panel-raised);
+}
+textarea {
+  resize: vertical;
+  font: inherit;
+  line-height: 1.45;
+}
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-soft);
+}
+.profile-editor-row {
+  display: grid;
+  grid-template-columns: 90px minmax(0, 1fr);
+  gap: 12px;
+}
+.avatar-field input {
+  text-align: center;
+  font-size: 1.2rem;
+}
+.primary-button,
+.secondary-button,
+.text-button {
+  border: 0;
+  border-radius: 9px;
+  font-weight: 800;
+}
+.primary-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 43px;
+  margin-top: 8px;
+  color: var(--bg);
+  background: var(--primary);
+}
+.primary-button.compact {
+  width: auto;
+  min-height: 36px;
+  margin: 0;
+  padding: 7px 13px;
+}
+.primary-button:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+.secondary-button {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  color: var(--text);
+  background: var(--surface);
+}
+.text-button {
+  width: 100%;
+  margin-top: 17px;
+  padding: 7px;
+  color: var(--muted);
+  background: transparent;
+}
+.text-button:hover {
+  color: var(--primary);
+}
+.form-error {
+  margin: 4px 0 12px;
+  color: var(--danger);
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+.icon-button {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  color: var(--muted);
+  background: var(--surface);
+}
+.icon-button:hover {
+  color: var(--text);
+}
+.icon-button.danger {
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 12%, var(--surface));
+}
+
+.modal-backdrop {
+  position: fixed;
+  z-index: 20;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(3, 5, 9, 0.72);
+  backdrop-filter: blur(7px);
+}
+.dialog {
+  width: min(100%, 470px);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+.dialog > header {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 11px;
+  padding: 18px;
+  border-bottom: 1px solid var(--border);
+}
+.dialog > header h2 {
+  font-size: 1rem;
+}
+.dialog > header p {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+.dialog-icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 11px;
+  color: var(--primary);
+  background: var(--primary-soft);
+}
+.dialog form {
+  padding: 18px;
+}
+.dialog form footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+@media (max-width: 480px) {
+  .auth-page {
+    padding: 12px;
+  }
+  .auth-card {
+    padding: 25px 20px;
+    border-radius: 16px;
+  }
+  .profile-editor-row {
+    grid-template-columns: 74px minmax(0, 1fr);
+  }
+}

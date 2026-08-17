@@ -1,0 +1,52 @@
+{
+  "name": "terminal-chat",
+  "version": "2.1.0",
+  "description": "Chat multiplataforma em tempo real para terminal e desktop",
+  "main": "index.js",
+  "scripts": {
+    "test": "run-s test:protocol test:server test:cli",
+    "predev": "npm run build --workspace=@terminal-chat/protocol",
+    "dev": "node scripts/dev.mjs",
+    "dev:protocol": "npm run dev --workspace=@terminal-chat/protocol",
+    "dev:server": "npm run dev --workspace=@terminal-chat/server",
+    "dev:cli": "cargo run --manifest-path frontend/cli/Cargo.toml",
+    "dev:desktop": "npm run tauri --workspace=@terminal-chat/desktop -- dev",
+    "build": "run-s build:protocol build:server build:desktop build:cli",
+    "build:protocol": "npm run build --workspace=@terminal-chat/protocol",
+    "build:server": "npm run build --workspace=@terminal-chat/server",
+    "build:desktop": "npm run build --workspace=@terminal-chat/desktop",
+    "build:cli": "cargo build --manifest-path frontend/cli/Cargo.toml --release",
+    "bundle:desktop": "npm run tauri --workspace=@terminal-chat/desktop -- build",
+    "typecheck": "run-s typecheck:protocol typecheck:server typecheck:desktop typecheck:cli",
+    "typecheck:protocol": "npm run typecheck --workspace=@terminal-chat/protocol",
+    "typecheck:server": "npm run typecheck --workspace=@terminal-chat/server",
+    "typecheck:desktop": "npm run typecheck --workspace=@terminal-chat/desktop",
+    "typecheck:cli": "cargo check --manifest-path frontend/cli/Cargo.toml",
+    "test:protocol": "npm run test --workspace=@terminal-chat/protocol",
+    "test:server": "npm run test --workspace=@terminal-chat/server",
+    "test:cli": "cargo test --manifest-path frontend/cli/Cargo.toml",
+    "format": "run-s format:typescript format:rust",
+    "format:typescript": "prettier --write .",
+    "format:rust": "cargo fmt --manifest-path frontend/cli/Cargo.toml",
+    "format:check": "prettier --check ."
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "type": "commonjs",
+  "private": true,
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "workspaces": [
+    "backend/protocol",
+    "backend/server",
+    "frontend/desktop"
+  ],
+  "devDependencies": {
+    "dotenv": "^17.4.2",
+    "npm-run-all2": "^8.0.4",
+    "prettier": "^3.9.6",
+    "typescript": "~6.0.2"
+  }
+}
