@@ -1,6 +1,7 @@
 mod channels;
 mod composer;
 mod contacts;
+mod emoji_picker;
 mod footer;
 mod header;
 mod help;
@@ -14,6 +15,7 @@ mod voice_status;
 pub use channels::render_channels;
 pub use composer::render_composer;
 pub use contacts::render_contacts;
+pub use emoji_picker::render_emoji_picker;
 pub use footer::render_footer;
 pub use header::render_header;
 pub use help::render_help;

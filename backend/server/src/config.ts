@@ -28,11 +28,12 @@ export function loadConfig(
   }
 
   const config: ServerConfig = {
-    host: environment.HOST ?? "127.0.0.1",
+    host: environment.HOST ?? (isProduction ? "0.0.0.0" : "127.0.0.1"),
     port,
     jwtSecret,
     corsOrigins: (
-      environment.CORS_ORIGINS ?? "http://localhost:5173,http://127.0.0.1:5173"
+      environment.CORS_ORIGINS ??
+      "http://localhost:5173,http://127.0.0.1:5173,http://tauri.localhost,https://tauri.localhost,tauri://localhost"
     )
       .split(",")
       .map((origin) => origin.trim())

@@ -38,6 +38,8 @@ pub struct App {
     pub muted: bool,
     pub deafened: bool,
     pub show_help: bool,
+    pub show_emoji_picker: bool,
+    pub selected_emoji: usize,
     pub notice: Option<String>,
     pub connected: bool,
     pub voice_connected: bool,
@@ -87,6 +89,8 @@ impl Default for App {
             muted: false,
             deafened: false,
             show_help: false,
+            show_emoji_picker: false,
+            selected_emoji: 0,
             notice,
             connected: false,
             voice_connected: false,
@@ -103,7 +107,7 @@ impl Default for App {
 impl App {
     pub fn from_session(session: SessionReady, realtime: RealtimeClient) -> Self {
         let (settings, notice) = match settings::load() {
-            Ok(settings) => (settings, Some("Conectado ao Terminal Chat v2.1".to_owned())),
+            Ok(settings) => (settings, Some("Conectado ao Terminal Chat v2.2".to_owned())),
             Err(_) => (
                 UserSettings::default(),
                 Some("Configuração inválida; usando os valores padrão".to_owned()),
@@ -130,6 +134,8 @@ impl App {
             muted: false,
             deafened: false,
             show_help: false,
+            show_emoji_picker: false,
+            selected_emoji: 0,
             notice,
             connected: true,
             voice_connected: false,

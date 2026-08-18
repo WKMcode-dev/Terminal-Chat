@@ -117,3 +117,18 @@ fn f9_is_reserved_for_the_local_microphone_test() {
         Some("Saia da chamada com F4 antes de testar o microfone")
     );
 }
+
+#[test]
+fn f10_opens_the_emoji_picker_in_the_composer() {
+    let mut app = App::default();
+    app.focus = Focus::Composer;
+
+    handle_key(&mut app, KeyEvent::new(KeyCode::F(10), KeyModifiers::NONE));
+
+    assert!(app.show_emoji_picker);
+    handle_key(&mut app, KeyEvent::new(KeyCode::Right, KeyModifiers::NONE));
+    handle_key(&mut app, KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE));
+
+    assert!(!app.show_emoji_picker);
+    assert!(!app.input.value().is_empty());
+}

@@ -80,7 +80,7 @@ export async function buildServer(
 
   server.get("/health", async () => ({
     status: "ok",
-    version: "2.1.0",
+    version: "2.2.0",
     protocol: 2,
     storage: repository.kind,
   }));

@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { SendHorizontal } from "lucide-react";
+import { SendHorizontal, SmilePlus } from "lucide-react";
 
 import type { ChatMessage, PublicUser } from "@terminal-chat/protocol";
+
+import { EmojiPicker } from "./EmojiPicker";
 
 interface ChatPanelProps {
   title: string;
@@ -21,7 +23,9 @@ export function ChatPanel({
   voiceBar,
 }: ChatPanelProps) {
   const [body, setBody] = useState("");
+  const [showEmojis, setShowEmojis] = useState(false);
   const bottom = useRef<HTMLDivElement>(null);
+  const composer = useRef<HTMLTextAreaElement>(null);
 
   useEffect(
     () => bottom.current?.scrollIntoView({ behavior: "smooth" }),
@@ -33,6 +37,18 @@ export function ChatPanel({
     const message = body.trim();
     if (!message || !onSend(message)) return;
     setBody("");
+  }
+
+  function insertEmoji(emoji: string) {
+    const input = composer.current;
+    const start = input?.selectionStart ?? body.length;
+    const end = input?.selectionEnd ?? start;
+    setBody(`${body.slice(0, start)}${emoji}${body.slice(end)}`);
+    setShowEmojis(false);
+    requestAnimationFrame(() => {
+      input?.focus();
+      input?.setSelectionRange(start + emoji.length, start + emoji.length);
+    });
   }
 
   return (
@@ -75,11 +91,27 @@ export function ChatPanel({
       </div>
       {voiceBar}
       <form className="composer" onSubmit={submit}>
+        {showEmojis && <EmojiPicker onPick={insertEmoji} />}
+        <button
+          aria-expanded={showEmojis}
+          aria-label="Abrir emojis"
+          className="emoji-button"
+          onClick={() => setShowEmojis((value) => !value)}
+          title="Emojis — Win+."
+          type="button"
+        >
+          <SmilePlus size={19} />
+        </button>
         <textarea
           aria-label="Mensagem"
           maxLength={4_000}
           onChange={(event) => setBody(event.target.value)}
           onKeyDown={(event) => {
+            if (event.metaKey && event.key === ".") {
+              event.preventDefault();
+              setShowEmojis((value) => !value);
+              return;
+            }
             if (event.key === "Enter" && !event.shiftKey) {
               event.preventDefault();
               event.currentTarget.form?.requestSubmit();
@@ -87,6 +119,7 @@ export function ChatPanel({
           }}
           placeholder={`Mensagem para ${title}`}
           rows={1}
+          ref={composer}
           value={body}
         />
         <button

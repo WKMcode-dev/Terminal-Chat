@@ -1,7 +1,7 @@
 {
   "$schema": "../../../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Terminal Chat",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "identifier": "dev.wkmcode.terminalchat",
   "build": {
     "frontendDist": "../dist",
@@ -22,7 +22,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self' customprotocol: asset:; connect-src 'self' ipc: http://ipc.localhost http://127.0.0.1:3000 ws://127.0.0.1:3000 http://localhost:3000 ws://localhost:3000; img-src 'self' asset: http://asset.localhost data:; style-src 'self' 'unsafe-inline';"
+      "csp": "default-src 'self' customprotocol: asset:; connect-src 'self' ipc: http://ipc.localhost http://127.0.0.1:* ws://127.0.0.1:* http://localhost:* ws://localhost:* https: wss:; img-src 'self' asset: http://asset.localhost data:; style-src 'self' 'unsafe-inline';"
     }
   },
   "bundle": {

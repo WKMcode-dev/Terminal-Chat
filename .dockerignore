@@ -1,0 +1,10 @@
+.git
+.dev-logs
+.terminal-chat
+node_modules
+**/node_modules
+**/dist
+**/target
+*.zip
+*.tsbuildinfo
+.env

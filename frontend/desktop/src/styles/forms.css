@@ -126,11 +126,89 @@ select:focus {
 .text-button:hover {
   color: var(--primary);
 }
+.server-toggle {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  margin-top: 12px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  color: var(--muted);
+  background: var(--surface);
+  text-align: left;
+}
+.server-toggle span,
+.server-toggle small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.server-toggle small {
+  margin-bottom: 2px;
+  color: var(--primary);
+  font-size: 0.62rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.server-field {
+  margin-top: 12px;
+}
+.server-field small {
+  color: var(--muted);
+  font-size: 0.67rem;
+  font-weight: 500;
+}
 .form-error {
   margin: 4px 0 12px;
   color: var(--danger);
   font-size: 0.75rem;
   line-height: 1.4;
+}
+.fatal-screen {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  padding: 24px;
+  color: #e9edf5;
+  background: #0b0e14;
+}
+.fatal-card {
+  width: min(100%, 560px);
+  padding: 30px;
+  border: 1px solid #293345;
+  border-radius: 16px;
+  background: #111620;
+}
+.fatal-card h1 {
+  margin: 7px 0 12px;
+  font-size: 1.6rem;
+}
+.fatal-card > p:not(.eyebrow) {
+  color: #a3adbc;
+  line-height: 1.55;
+}
+.fatal-card code {
+  display: block;
+  overflow-wrap: anywhere;
+  margin: 18px 0;
+  padding: 11px;
+  border-radius: 8px;
+  color: #fb7185;
+  background: #171d29;
+}
+.fatal-card > div,
+.connection-failure > div {
+  display: flex;
+  justify-content: center;
+  gap: 9px;
+}
+.connection-failure p {
+  max-width: 520px;
+  line-height: 1.5;
 }
 .icon-button {
   display: grid;

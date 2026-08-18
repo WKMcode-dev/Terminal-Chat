@@ -1,7 +1,17 @@
 import { useState, type FormEvent } from "react";
-import { LockKeyhole, Radio, UserRoundPlus } from "lucide-react";
+import {
+  ChevronDown,
+  Database,
+  LockKeyhole,
+  Radio,
+  UserRoundPlus,
+} from "lucide-react";
 
 import { api } from "../../services/api";
+import {
+  getServerHttpUrl,
+  setServerHttpUrl,
+} from "../../services/serverConfig";
 
 interface LoginScreenProps {
   onAuthenticated: (accessToken: string) => void;
@@ -14,12 +24,15 @@ export function LoginScreen({ onAuthenticated }: LoginScreenProps) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string>();
   const [loading, setLoading] = useState(false);
+  const [showServer, setShowServer] = useState(false);
+  const [serverUrl, setServerUrl] = useState(getServerHttpUrl);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
     setLoading(true);
     setError(undefined);
     try {
+      setServerUrl(setServerHttpUrl(serverUrl));
       const session = registering
         ? await api.register({ username, displayName, password })
         : await api.login({ username, password });
@@ -42,7 +55,7 @@ export function LoginScreen({ onAuthenticated }: LoginScreenProps) {
         <div className="brand-mark">
           <Radio size={26} />
         </div>
-        <p className="eyebrow">Terminal Chat v2.1</p>
+        <p className="eyebrow">Terminal Chat v2.2</p>
         <h1 id="auth-title">
           {registering ? "Crie sua conta" : "Bem-vindo de volta"}
         </h1>
@@ -109,6 +122,33 @@ export function LoginScreen({ onAuthenticated }: LoginScreenProps) {
         >
           {registering ? "Já tenho uma conta" : "Quero criar uma conta"}
         </button>
+        <button
+          aria-expanded={showServer}
+          className="server-toggle"
+          onClick={() => setShowServer((value) => !value)}
+          type="button"
+        >
+          <Database size={15} />
+          <span>
+            <small>Servidor</small>
+            {new URL(getServerHttpUrl()).host}
+          </span>
+          <ChevronDown size={15} />
+        </button>
+        {showServer && (
+          <label className="server-field">
+            Endereço da comunidade
+            <input
+              autoCapitalize="none"
+              autoComplete="url"
+              onChange={(event) => setServerUrl(event.target.value)}
+              placeholder="https://terminal-chat.koyeb.app"
+              spellCheck={false}
+              value={serverUrl}
+            />
+            <small>Use HTTP somente para o servidor local.</small>
+          </label>
+        )}
       </section>
     </main>
   );

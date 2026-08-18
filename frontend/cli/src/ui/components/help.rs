@@ -30,6 +30,7 @@ pub fn render_help(frame: &mut Frame, app: &App, theme: Theme) {
         shortcut("F3", "Ativa ou silencia todo o áudio", theme),
         shortcut("F4", "Entra ou sai da voz da conversa/canal", theme),
         shortcut("F9", "Testa o microfone com retorno local", theme),
+        shortcut("Win+. / F10 / Ctrl+E", "Abre o seletor interno de emojis", theme),
         shortcut("A / R / B / M", "Ações no perfil selecionado", theme),
         shortcut("Esc", "Fecha, limpa ou retorna à navegação", theme),
         shortcut("Ctrl+C", "Copia a mensagem atualmente selecionada", theme),

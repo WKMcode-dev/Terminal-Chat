@@ -1,4 +1,4 @@
-# 💬 Terminal Chat v2.1
+# 💬 Terminal Chat v2.2
 
 Chat em tempo real com dois clientes: uma interface completa no terminal e um
 aplicativo desktop em Tauri. Ambos usam o mesmo servidor, as mesmas contas, os
@@ -21,10 +21,15 @@ mesmos canais, o mesmo histórico e as mesmas salas de voz.
 - teste local do microfone com retorno da voz e medidor de nível;
 - perfis editáveis com avatar em emoji, bio e atividade;
 - solicitações de amizade, aceite, remoção, bloqueio e desbloqueio;
+- busca por nome ou `@usuário` e filtros de amigos, solicitações e bloqueios;
 - abertura de conversas e chamadas diretamente pelos perfis;
+- seletor interno de emojis no terminal e no desktop;
 - interface CLI responsiva, UTF-8 e compatível com teclado ABNT2;
 - interface desktop responsiva com três paletas e controle de animações;
+- recuperação visível de erros do Tauri, sem permanecer em uma tela preta;
+- seleção do servidor local ou hospedado diretamente na tela de login;
 - persistência local pronta para uso ou PostgreSQL para implantação;
+- Dockerfile e configuração de deploy para hospedagem gratuita;
 - validação compartilhada de todos os eventos pelo protocolo v2.
 
 ## 🚀 Executar no Windows
@@ -85,23 +90,24 @@ preparados automaticamente pelo servidor.
 
 ## ⌨️ Navegação no terminal
 
-| Atalho                  | Ação                                        |
-| ----------------------- | ------------------------------------------- |
-| `1`, `2`, `3`, `4`      | Abre uma área quando Navegação está focada  |
-| `Ctrl+←` / `Ctrl+→`     | Alterna globalmente entre as áreas          |
-| `H` / `L`               | Alterna áreas dentro do painel Navegação    |
-| `Tab` / `Shift+Tab`     | Percorre os painéis atuais                  |
-| `↑` / `↓` ou `J` / `K`  | Navega por itens e mensagens                |
-| `Page Up` / `Page Down` | Percorre o histórico                        |
-| `Home` / `End`          | Primeira ou última mensagem                 |
-| `Enter`                 | Abre ou envia                               |
-| `F1`                    | Ajuda completa                              |
-| `F2`                    | Ativa ou silencia o microfone               |
-| `F3`                    | Ativa ou silencia a reprodução de áudio     |
-| `F4`                    | Entra ou sai da voz da conversa/canal atual |
-| `F9`                    | Testa o microfone com retorno e medidor     |
-| `Ctrl+C`                | Copia a mensagem selecionada                |
-| `Ctrl+Q`                | Encerra o aplicativo                        |
+| Atalho                     | Ação                                        |
+| -------------------------- | ------------------------------------------- |
+| `1`, `2`, `3`, `4`         | Abre uma área quando Navegação está focada  |
+| `Ctrl+←` / `Ctrl+→`        | Alterna globalmente entre as áreas          |
+| `H` / `L`                  | Alterna áreas dentro do painel Navegação    |
+| `Tab` / `Shift+Tab`        | Percorre os painéis atuais                  |
+| `↑` / `↓` ou `J` / `K`     | Navega por itens e mensagens                |
+| `Page Up` / `Page Down`    | Percorre o histórico                        |
+| `Home` / `End`             | Primeira ou última mensagem                 |
+| `Enter`                    | Abre ou envia                               |
+| `F1`                       | Ajuda completa                              |
+| `F2`                       | Ativa ou silencia o microfone               |
+| `F3`                       | Ativa ou silencia a reprodução de áudio     |
+| `F4`                       | Entra ou sai da voz da conversa/canal atual |
+| `F9`                       | Testa o microfone com retorno e medidor     |
+| `Win+.` / `F10` / `Ctrl+E` | Abre o seletor interno de emojis            |
+| `Ctrl+C`                   | Copia a mensagem selecionada                |
+| `Ctrl+Q`                   | Encerra o aplicativo                        |
 
 `F5–F8`, `Alt+1–4`, `Ctrl+1–4` e `Ctrl+Tab` continuam como aliases quando o
 terminal os transmitir. A navegação principal evita depender deles porque CMD e
@@ -113,9 +119,10 @@ Também existem os comandos `/conversas`, `/canais`, `/perfis`, `/config`,
 ## 👥 Perfis e amizades
 
 No desktop, abra **Perfis** para editar seu nome de exibição, avatar em emoji,
-bio, atividade e presença. Os cartões permitem adicionar, aceitar, recusar,
-remover, bloquear e desbloquear usuários. Os botões **Mensagem** e **Chamar**
-abrem o contato diretamente.
+bio, atividade e presença. A busca encontra pessoas pelo nome ou `@usuário`, e
+as abas separam amigos, solicitações e bloqueios. Os cartões permitem adicionar,
+aceitar, recusar, remover, bloquear e desbloquear usuários. Os botões
+**Mensagem** e **Chamar** abrem o contato diretamente.
 
 Na CLI, selecione um perfil e use:
 
@@ -134,7 +141,9 @@ quanto no PostgreSQL e sincronizados em tempo real entre CLI e desktop.
 
 O compositor trabalha em UTF-8 e preserva acentos, `ç`, `?`, `@`, símbolos,
 combinações de `AltGr` e emojis. Colagens com várias linhas são normalizadas sem
-quebrar limites Unicode.
+quebrar limites Unicode. Como o modo bruto de alguns terminais do Windows pode
+interceptar `Win+.`, a CLI oferece o seletor próprio em `F10` e `Ctrl+E`. O
+desktop também possui um botão de emojis ao lado do campo de mensagem.
 
 Em **Configurações → Símbolos decorativos → Simplificado**, bordas e seletores
 são simplificados, mas os estados continuam usando as bolinhas:
@@ -163,6 +172,18 @@ somente os dois usuários que formam o identificador da sala.
 Para produção pública ou grupos muito grandes, a evolução recomendada é trocar o
 transporte PCM pelo LiveKit já previsto nas dependências do servidor, mantendo
 os mesmos eventos de sala.
+
+## ☁️ Servidor online gratuito
+
+O guia [DEPLOY.md](DEPLOY.md) ensina a usar Neon PostgreSQL com Koyeb ou Render.
+O servidor inclui Dockerfile, health check, heartbeat WebSocket, espera de cold
+start e reconexão automática. Depois do deploy, o endereço HTTPS pode ser
+informado na própria tela de login do desktop; a CLI usa
+`TERMINAL_CHAT_SERVER=wss://seu-dominio/ws`.
+
+As opções gratuitas podem dormir quando ninguém estiver conectado. Elas voltam
+automaticamente na próxima conexão, portanto ficam acessíveis a qualquer hora,
+mas não oferecem o mesmo SLA de uma hospedagem paga.
 
 ## 🧱 Arquitetura
 

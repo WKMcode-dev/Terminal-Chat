@@ -1,5 +1,5 @@
 use crate::{
-    chat::{ChatMessage, Conversation, MessageAuthor},
+    chat::{ChatMessage, Conversation, EMOJI_COLUMNS, EMOJIS, MessageAuthor},
     commands::Command,
     platform::clipboard,
     profiles::{Profile, ProfileRelationship},
@@ -10,6 +10,39 @@ use crate::{
 use super::{App, Focus, MessageMovement, Section};
 
 impl App {
+    pub fn toggle_emoji_picker(&mut self) {
+        if !self.section.is_messaging() || self.focus != Focus::Composer {
+            self.notice = Some("Abra o campo de mensagem para escolher um emoji".to_owned());
+            return;
+        }
+        self.show_help = false;
+        self.show_emoji_picker = !self.show_emoji_picker;
+    }
+
+    pub fn previous_emoji(&mut self) {
+        self.selected_emoji = self.selected_emoji.checked_sub(1).unwrap_or(EMOJIS.len() - 1);
+    }
+
+    pub fn next_emoji(&mut self) {
+        self.selected_emoji = (self.selected_emoji + 1) % EMOJIS.len();
+    }
+
+    pub fn previous_emoji_row(&mut self) {
+        self.selected_emoji = self.selected_emoji.saturating_sub(EMOJI_COLUMNS);
+    }
+
+    pub fn next_emoji_row(&mut self) {
+        self.selected_emoji = (self.selected_emoji + EMOJI_COLUMNS).min(EMOJIS.len() - 1);
+    }
+
+    pub fn insert_selected_emoji(&mut self) {
+        if let Some((emoji, _)) = EMOJIS.get(self.selected_emoji) {
+            self.input.insert_str(emoji);
+        }
+        self.show_emoji_picker = false;
+        self.focus = Focus::Composer;
+    }
+
     pub fn next_list_item(&mut self) {
         match self.section {
             Section::Conversations => {

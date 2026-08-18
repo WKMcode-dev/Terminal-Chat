@@ -80,6 +80,11 @@ pub enum ClientEvent {
         sample_rate: u32,
         samples: String,
     },
+    #[serde(rename = "ping")]
+    Ping {
+        #[serde(rename = "sentAt")]
+        sent_at: String,
+    },
 }
 
 #[derive(Debug, Clone, Deserialize)]

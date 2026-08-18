@@ -14,7 +14,7 @@ process.once("SIGTERM", () => void stop());
 try {
   await server.listen({ host: config.host, port: config.port });
   server.log.info(
-    `Terminal Chat v2.1 disponível em http://${config.host}:${config.port} (${config.databaseUrl ? "PostgreSQL" : "arquivo local"})`,
+    `Terminal Chat v2.2 disponível em http://${config.host}:${config.port} (${config.databaseUrl ? "PostgreSQL" : "arquivo local"})`,
   );
 } catch (error) {
   server.log.error(error);

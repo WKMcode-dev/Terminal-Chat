@@ -1,0 +1,28 @@
+pub const EMOJI_COLUMNS: usize = 6;
+
+pub const EMOJIS: &[(&str, &str)] = &[
+    ("😀", "Feliz"),
+    ("😄", "Sorriso"),
+    ("😂", "Rindo"),
+    ("😊", "Contente"),
+    ("🥰", "Carinho"),
+    ("😎", "Óculos"),
+    ("🤔", "Pensando"),
+    ("😭", "Chorando"),
+    ("😡", "Bravo"),
+    ("🦊", "Raposa"),
+    ("🐉", "Dragão"),
+    ("🐺", "Lobo"),
+    ("👍", "Curtir"),
+    ("👏", "Palmas"),
+    ("🙏", "Obrigado"),
+    ("💪", "Força"),
+    ("🔥", "Fogo"),
+    ("✨", "Brilho"),
+    ("💎", "Diamante"),
+    ("🧡", "Coração"),
+    ("🎮", "Jogo"),
+    ("🎙️", "Microfone"),
+    ("🎧", "Fone"),
+    ("🚀", "Foguete"),
+];

@@ -10,10 +10,7 @@ import {
   type RegisterRequest,
 } from "@terminal-chat/protocol";
 
-export const API_BASE = (
-  import.meta.env.VITE_API_URL ?? "http://127.0.0.1:3000"
-).replace(/\/$/, "");
-export const WS_URL = API_BASE.replace(/^http/, "ws") + "/ws";
+import { getServerHttpUrl } from "./serverConfig";
 
 export class ApiRequestError extends Error {
   readonly code: string;
@@ -70,15 +67,25 @@ async function request<T>(
   options: RequestOptions,
   parse: (value: unknown) => T,
 ): Promise<T> {
-  const response = await fetch(`${API_BASE}${path}`, {
-    method: options.method ?? "GET",
-    headers: {
-      Accept: "application/json",
-      ...(options.body ? { "Content-Type": "application/json" } : {}),
-      ...(options.token ? { Authorization: `Bearer ${options.token}` } : {}),
-    },
-    ...(options.body ? { body: JSON.stringify(options.body) } : {}),
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${getServerHttpUrl()}${path}`, {
+      method: options.method ?? "GET",
+      headers: {
+        Accept: "application/json",
+        ...(options.body ? { "Content-Type": "application/json" } : {}),
+        ...(options.token ? { Authorization: `Bearer ${options.token}` } : {}),
+      },
+      ...(options.body ? { body: JSON.stringify(options.body) } : {}),
+      signal: AbortSignal.timeout(75_000),
+    });
+  } catch (reason) {
+    const message =
+      reason instanceof DOMException && reason.name === "TimeoutError"
+        ? "O servidor demorou para responder. Ele pode estar despertando; tente novamente."
+        : "Não foi possível alcançar o servidor configurado";
+    throw new ApiRequestError("SERVER_UNREACHABLE", message, 0);
+  }
   const payload: unknown = await response.json().catch(() => ({}));
   if (!response.ok) {
     const error = ApiErrorSchema.safeParse(payload);

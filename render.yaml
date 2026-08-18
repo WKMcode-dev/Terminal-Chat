@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: terminal-chat
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DATABASE_URL
+        sync: false
+      - key: CORS_ORIGINS
+        value: http://tauri.localhost,https://tauri.localhost,tauri://localhost

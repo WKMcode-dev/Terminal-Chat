@@ -3,7 +3,7 @@ import { LoaderCircle } from "lucide-react";
 
 import { LoginScreen } from "./components/auth/LoginScreen";
 import { AppShell } from "./components/layout/AppShell";
-import { api } from "./services/api";
+import { api, ApiRequestError } from "./services/api";
 import { RealtimeClient } from "./services/realtime";
 import { useChatStore } from "./store/chatStore";
 import "./styles/tokens.css";
@@ -17,6 +17,8 @@ function App() {
   );
   const [realtime, setRealtime] = useState<RealtimeClient>();
   const [loading, setLoading] = useState(Boolean(accessToken));
+  const [connectionError, setConnectionError] = useState<string>();
+  const [connectionAttempt, setConnectionAttempt] = useState(0);
   const hydrate = useChatStore((state) => state.hydrate);
   const clear = useChatStore((state) => state.clear);
 
@@ -34,13 +36,21 @@ function App() {
         client.connect();
         setRealtime(client);
       })
-      .catch(() => {
+      .catch((reason: unknown) => {
         if (!cancelled) {
           createdClient?.close();
           setRealtime(undefined);
-          setAccessToken(null);
-          sessionStorage.removeItem("terminal-chat-token");
-          clear();
+          if (reason instanceof ApiRequestError && reason.status === 401) {
+            setAccessToken(null);
+            sessionStorage.removeItem("terminal-chat-token");
+            clear();
+          } else {
+            setConnectionError(
+              reason instanceof Error
+                ? reason.message
+                : "Não foi possível abrir o painel",
+            );
+          }
         }
       })
       .finally(() => !cancelled && setLoading(false));
@@ -48,9 +58,10 @@ function App() {
       cancelled = true;
       createdClient?.close();
     };
-  }, [accessToken, clear, hydrate]);
+  }, [accessToken, clear, connectionAttempt, hydrate]);
 
   function authenticated(token: string) {
+    setConnectionError(undefined);
     setAccessToken(token);
     setLoading(true);
   }
@@ -73,6 +84,29 @@ function App() {
     );
   }
   if (!accessToken) return <LoginScreen onAuthenticated={authenticated} />;
+  if (connectionError)
+    return (
+      <main className="splash connection-failure">
+        <strong>Não foi possível carregar o painel</strong>
+        <p>{connectionError}</p>
+        <div>
+          <button
+            className="primary-button compact"
+            onClick={() => {
+              setConnectionError(undefined);
+              setLoading(true);
+              setConnectionAttempt((value) => value + 1);
+            }}
+            type="button"
+          >
+            Tentar novamente
+          </button>
+          <button className="secondary-button" onClick={logout} type="button">
+            Voltar ao login
+          </button>
+        </div>
+      </main>
+    );
   if (!realtime)
     return (
       <main className="splash">

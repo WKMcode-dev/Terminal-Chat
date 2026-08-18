@@ -18,6 +18,9 @@ pub struct RealtimeClient {
 
 impl RealtimeClient {
     pub fn connect(server_url: String, authentication: ClientEvent) -> Result<(SessionReady, Self)> {
+        let remote_server = !server_url.contains("127.0.0.1") && !server_url.contains("localhost");
+        let startup_timeout = if remote_server { 90 } else { 20 };
+        let connection_attempts = if remote_server { 140 } else { 20 };
         let (command_sender, command_receiver) = tokio::sync::mpsc::unbounded_channel();
         let (event_sender, event_receiver) = mpsc::channel();
         let (ready_sender, ready_receiver) = mpsc::sync_channel(1);
@@ -33,6 +36,7 @@ impl RealtimeClient {
                         command_receiver,
                         event_sender,
                         ready_sender,
+                        connection_attempts,
                     )),
                     Err(error) => {
                         let _ = ready_sender.send(Err(format!(
@@ -43,7 +47,7 @@ impl RealtimeClient {
             })
             .context("não foi possível iniciar o cliente em tempo real")?;
 
-        let session = match ready_receiver.recv_timeout(Duration::from_secs(20)) {
+        let session = match ready_receiver.recv_timeout(Duration::from_secs(startup_timeout)) {
             Ok(Ok(session)) => session,
             Ok(Err(message)) => return Err(anyhow!(message)),
             Err(RecvTimeoutError::Timeout) => {
@@ -87,8 +91,15 @@ async fn run_actor(
     mut commands: UnboundedReceiver<ClientEvent>,
     events: mpsc::Sender<ServerEvent>,
     ready: mpsc::SyncSender<Result<SessionReady, String>>,
+    connection_attempts: usize,
 ) {
-    let (mut socket, session) = match authenticate_with_retry(&server_url, authentication, 20).await {
+    let (mut socket, session) = match authenticate_with_retry(
+        &server_url,
+        authentication,
+        connection_attempts,
+    )
+    .await
+    {
         Ok(connection) => connection,
         Err(error) => {
             let _ = ready.send(Err(error.to_string()));
@@ -114,7 +125,7 @@ async fn run_actor(
         let resume = ClientEvent::AuthResume {
             access_token: access_token.clone(),
         };
-        match authenticate_with_retry(&server_url, resume, 40).await {
+        match authenticate_with_retry(&server_url, resume, 140).await {
             Ok((new_socket, new_session)) => {
                 socket = new_socket;
                 if let Some(room_id) = joined_room.clone() {
@@ -167,7 +178,7 @@ async fn authenticate_with_retry(
             Err(error) => last_error = Some(error.to_string()),
         }
         if attempt + 1 < attempts {
-            tokio::time::sleep(Duration::from_millis(250)).await;
+            tokio::time::sleep(Duration::from_millis(500)).await;
         }
     }
     Err(anyhow!(
@@ -216,7 +227,11 @@ async fn run_connected(
                 }
             }
             _ = heartbeat.tick() => {
-                if socket.send(Message::Ping(Vec::new().into())).await.is_err() { return false; }
+                let heartbeat_event = ClientEvent::Ping {
+                    sent_at: "1970-01-01T00:00:00.000Z".to_owned(),
+                };
+                let Ok(payload) = serde_json::to_string(&heartbeat_event) else { continue };
+                if socket.send(Message::Text(payload.into())).await.is_err() { return false; }
             }
         }
     }

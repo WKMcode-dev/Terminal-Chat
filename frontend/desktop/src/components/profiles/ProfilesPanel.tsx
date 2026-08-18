@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   AtSign,
   Ban,
@@ -7,6 +7,7 @@ import {
   MessageCircle,
   Pencil,
   Phone,
+  Search,
   UserMinus,
   UserPlus,
   UserRound,
@@ -36,6 +37,8 @@ type Relationship =
   | { type: "blocked"; friendship: Friendship }
   | { type: "blocked-by"; friendship: Friendship };
 
+type ProfileFilter = "all" | "friends" | "requests" | "blocked";
+
 export function ProfilesPanel({
   profiles,
   friendships,
@@ -46,6 +49,61 @@ export function ProfilesPanel({
 }: ProfilesPanelProps) {
   const [editing, setEditing] = useState(false);
   const [notice, setNotice] = useState<string>();
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<ProfileFilter>("all");
+
+  const incomingRequests = friendships.filter(
+    (friendship) =>
+      friendship.status === "pending" &&
+      friendship.addresseeId === currentUser?.id,
+  ).length;
+  const friendCount = friendships.filter(
+    (friendship) => friendship.status === "accepted",
+  ).length;
+  const visibleProfiles = useMemo(() => {
+    const normalizedQuery = query.trim().toLocaleLowerCase("pt-BR");
+    return profiles
+      .filter((profile) => {
+        const relation = relationship(friendships, currentUser?.id, profile.id);
+        const matchesQuery =
+          !normalizedQuery ||
+          profile.displayName
+            .toLocaleLowerCase("pt-BR")
+            .includes(normalizedQuery) ||
+          profile.username
+            .toLocaleLowerCase("pt-BR")
+            .includes(normalizedQuery.replace(/^@/, ""));
+        if (!matchesQuery) return false;
+        if (filter === "friends") return relation.type === "friends";
+        if (filter === "requests")
+          return relation.type === "incoming" || relation.type === "outgoing";
+        if (filter === "blocked")
+          return relation.type === "blocked" || relation.type === "blocked-by";
+        return true;
+      })
+      .sort((left, right) => {
+        const priority = (profile: PublicUser) => {
+          const type = relationship(
+            friendships,
+            currentUser?.id,
+            profile.id,
+          ).type;
+          return {
+            self: 0,
+            incoming: 1,
+            friends: 2,
+            outgoing: 3,
+            none: 4,
+            blocked: 5,
+            "blocked-by": 6,
+          }[type];
+        };
+        return (
+          priority(left) - priority(right) ||
+          left.displayName.localeCompare(right.displayName, "pt-BR")
+        );
+      });
+  }, [currentUser?.id, filter, friendships, profiles, query]);
 
   function send(event: Parameters<RealtimeClient["send"]>[0], message: string) {
     if (realtime.send(event)) setNotice(message);
@@ -82,8 +140,47 @@ export function ProfilesPanel({
         <p>Edite seu perfil, encontre amigos e inicie conversas ou chamadas.</p>
       </header>
       {notice && <p className="profiles-notice">{notice}</p>}
+      <div className="profiles-toolbar">
+        <label className="profile-search">
+          <Search size={17} />
+          <input
+            aria-label="Buscar pessoa"
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Buscar por nome ou @usuário"
+            value={query}
+          />
+        </label>
+        <div
+          className="profile-filters"
+          role="tablist"
+          aria-label="Filtrar perfis"
+        >
+          <FilterButton
+            active={filter === "all"}
+            label="Todos"
+            onClick={() => setFilter("all")}
+          />
+          <FilterButton
+            active={filter === "friends"}
+            count={friendCount}
+            label="Amigos"
+            onClick={() => setFilter("friends")}
+          />
+          <FilterButton
+            active={filter === "requests"}
+            count={incomingRequests}
+            label="Solicitações"
+            onClick={() => setFilter("requests")}
+          />
+          <FilterButton
+            active={filter === "blocked"}
+            label="Bloqueados"
+            onClick={() => setFilter("blocked")}
+          />
+        </div>
+      </div>
       <div className="profile-grid">
-        {profiles.map((profile) => {
+        {visibleProfiles.map((profile) => {
           const relation = relationship(
             friendships,
             currentUser?.id,
@@ -188,6 +285,13 @@ export function ProfilesPanel({
             </article>
           );
         })}
+        {visibleProfiles.length === 0 && (
+          <div className="profiles-empty">
+            <UserRound size={26} />
+            <strong>Nenhum perfil encontrado</strong>
+            <span>Altere a busca ou escolha outro filtro.</span>
+          </div>
+        )}
       </div>
       {editing && currentUser && (
         <ProfileEditor
@@ -197,6 +301,31 @@ export function ProfilesPanel({
         />
       )}
     </section>
+  );
+}
+
+function FilterButton({
+  active,
+  count,
+  label,
+  onClick,
+}: {
+  active: boolean;
+  count?: number;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      aria-selected={active}
+      className={active ? "profile-filter active" : "profile-filter"}
+      onClick={onClick}
+      role="tab"
+      type="button"
+    >
+      {label}
+      {Boolean(count) && <b>{count}</b>}
+    </button>
   );
 }
 

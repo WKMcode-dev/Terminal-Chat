@@ -5,7 +5,7 @@ import {
   type ServerEvent,
 } from "@terminal-chat/protocol";
 
-import { WS_URL } from "./api";
+import { getServerWebSocketUrl } from "./serverConfig";
 
 type Listener = (event: ServerEvent) => void;
 
@@ -13,6 +13,7 @@ export class RealtimeClient {
   private accessToken: string;
   private socket?: WebSocket;
   private reconnectTimer?: number;
+  private heartbeatTimer?: number;
   private reconnectAttempt = 0;
   private manuallyClosed = false;
   private readonly listeners = new Set<Listener>();
@@ -30,6 +31,7 @@ export class RealtimeClient {
   close(): void {
     this.manuallyClosed = true;
     if (this.reconnectTimer) window.clearTimeout(this.reconnectTimer);
+    if (this.heartbeatTimer) window.clearInterval(this.heartbeatTimer);
     this.socket?.close(1000, "logout");
     this.socket = undefined;
     this.joinedRooms.clear();
@@ -53,7 +55,13 @@ export class RealtimeClient {
   }
 
   private openSocket(): void {
-    const socket = new WebSocket(WS_URL);
+    let socket: WebSocket;
+    try {
+      socket = new WebSocket(getServerWebSocketUrl());
+    } catch {
+      this.scheduleReconnect();
+      return;
+    }
     this.socket = socket;
     socket.addEventListener("open", () => {
       this.reconnectAttempt = 0;
@@ -72,11 +80,26 @@ export class RealtimeClient {
         for (const roomId of this.joinedRooms) {
           this.send({ type: "voice.join", payload: { roomId } });
         }
+        this.startHeartbeat();
       }
       for (const listener of this.listeners) listener(decoded.data);
     });
-    socket.addEventListener("close", () => this.scheduleReconnect());
+    socket.addEventListener("close", () => {
+      if (this.heartbeatTimer) window.clearInterval(this.heartbeatTimer);
+      this.heartbeatTimer = undefined;
+      this.scheduleReconnect();
+    });
     socket.addEventListener("error", () => socket.close());
+  }
+
+  private startHeartbeat(): void {
+    if (this.heartbeatTimer) window.clearInterval(this.heartbeatTimer);
+    this.heartbeatTimer = window.setInterval(() => {
+      this.send({
+        type: "ping",
+        payload: { sentAt: new Date().toISOString() },
+      });
+    }, 20_000);
   }
 
   private scheduleReconnect(): void {

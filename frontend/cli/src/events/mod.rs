@@ -41,6 +41,29 @@ fn handle_key(app: &mut App, key: KeyEvent) {
         return;
     }
 
+    let system_emoji_shortcut =
+        key.modifiers.contains(KeyModifiers::SUPER) && key.code == KeyCode::Char('.');
+    if key.code == KeyCode::F(10)
+        || (control && !alt && key.code == KeyCode::Char('e'))
+        || system_emoji_shortcut
+    {
+        app.toggle_emoji_picker();
+        return;
+    }
+
+    if app.show_emoji_picker {
+        match key.code {
+            KeyCode::Esc => app.toggle_emoji_picker(),
+            KeyCode::Left | KeyCode::Char('h') => app.previous_emoji(),
+            KeyCode::Right | KeyCode::Char('l') => app.next_emoji(),
+            KeyCode::Up | KeyCode::Char('k') => app.previous_emoji_row(),
+            KeyCode::Down | KeyCode::Char('j') => app.next_emoji_row(),
+            KeyCode::Enter => app.insert_selected_emoji(),
+            _ => {}
+        }
+        return;
+    }
+
     app.notice = None;
 
     if handle_section_shortcut(app, key) {
@@ -81,7 +104,10 @@ fn handle_key(app: &mut App, key: KeyEvent) {
     }
 
     match key.code {
-        KeyCode::F(1) => app.show_help = !app.show_help,
+        KeyCode::F(1) => {
+            app.show_emoji_picker = false;
+            app.show_help = !app.show_help;
+        }
         KeyCode::F(2) => app.toggle_mute(),
         KeyCode::F(3) => app.toggle_deafen(),
         KeyCode::F(4) => app.toggle_voice(),

@@ -28,7 +28,7 @@ pub fn connect_interactively() -> Result<(SessionReady, RealtimeClient)> {
         }
     }
 
-    println!("\nTerminal Chat v2.1 — conexão segura");
+    println!("\nTerminal Chat v2.2 — conexão segura");
     println!("Servidor: {server_url}\n");
     for _ in 0..3 {
         let mode = read_line("[1] Entrar  [2] Criar conta: ")?;

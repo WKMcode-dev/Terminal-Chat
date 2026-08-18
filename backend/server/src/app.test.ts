@@ -104,6 +104,15 @@ describe("Terminal Chat server", () => {
       throw new Error("Sessão WebSocket não confirmada");
     const channelId = ready.payload.bootstrap.channels[0]!.id;
 
+    const pong = nextSocketEventOfType(socket, "pong");
+    socket.send(
+      JSON.stringify({
+        type: "ping",
+        payload: { sentAt: "2026-08-18T12:00:00.000Z" },
+      }),
+    );
+    expect((await pong).payload.sentAt).toBe("2026-08-18T12:00:00.000Z");
+
     socket.send(
       JSON.stringify({
         type: "message.send",
