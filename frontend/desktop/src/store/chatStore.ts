@@ -98,6 +98,10 @@ export const useChatStore = create<ChatState>((set) => ({
         case "presence.changed":
         case "profile.updated":
           return applyPresence(state, event.payload);
+        case "profile.removed":
+          return removeProfile(state, event.payload.userId);
+        case "account.deleted":
+          return state;
         case "friendship.changed":
           return {
             friendships: state.friendships.some(
@@ -215,5 +219,23 @@ function applyPresence(state: ChatState, user: PublicUser): Partial<ChatState> {
     profiles,
     conversations,
     channels: state.channels.map((channel) => ({ ...channel, membersOnline })),
+  };
+}
+
+function removeProfile(state: ChatState, userId: string): Partial<ChatState> {
+  const conversations = state.conversations.filter(
+    (conversation) => conversation.contact.id !== userId,
+  );
+  return {
+    profiles: state.profiles.filter((profile) => profile.id !== userId),
+    conversations,
+    friendships: state.friendships.filter(
+      (friendship) =>
+        friendship.requesterId !== userId && friendship.addresseeId !== userId,
+    ),
+    activeContactId:
+      state.activeContactId === userId
+        ? conversations[0]?.contact.id
+        : state.activeContactId,
   };
 }

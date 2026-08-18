@@ -98,6 +98,26 @@ export class JsonRepository implements Repository {
     return structuredClone(this.state.users);
   }
 
+  async deleteUser(userId: string): Promise<boolean> {
+    const previousLength = this.state.users.length;
+    this.state.users = this.state.users.filter((user) => user.id !== userId);
+    if (this.state.users.length === previousLength) return false;
+
+    this.state.channelMembers = this.state.channelMembers.filter(
+      (member) => member.userId !== userId,
+    );
+    this.state.messages = this.state.messages.filter(
+      (message) =>
+        message.authorId !== userId && message.recipientId !== userId,
+    );
+    this.state.friendships = this.state.friendships.filter(
+      (friendship) =>
+        friendship.requesterId !== userId && friendship.addresseeId !== userId,
+    );
+    await this.persist();
+    return true;
+  }
+
   async updateProfile(
     userId: string,
     input: UpdateProfileInput,

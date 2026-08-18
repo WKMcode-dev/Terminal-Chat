@@ -62,6 +62,11 @@ pub enum ClientEvent {
         #[serde(rename = "userId")]
         user_id: String,
     },
+    #[serde(rename = "account.delete")]
+    AccountDelete {
+        password: String,
+        confirmation: String,
+    },
     #[serde(rename = "voice.join")]
     VoiceJoin {
         #[serde(rename = "roomId")]
@@ -102,6 +107,17 @@ pub enum ServerEvent {
     PresenceChanged(WireUser),
     #[serde(rename = "profile.updated")]
     ProfileUpdated(WireUser),
+    #[serde(rename = "profile.removed")]
+    ProfileRemoved {
+        #[serde(rename = "userId")]
+        user_id: String,
+    },
+    #[serde(rename = "account.deleted")]
+    AccountDeleted {
+        deleted: bool,
+        #[serde(rename = "userId")]
+        user_id: String,
+    },
     #[serde(rename = "friendship.changed")]
     FriendshipChanged(WireFriendship),
     #[serde(rename = "friendship.removed")]

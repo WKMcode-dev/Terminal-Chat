@@ -1,6 +1,8 @@
 import { Bell, Moon, Palette, Volume2, WandSparkles } from "lucide-react";
 import { useEffect, useState } from "react";
 
+import { AccountSettings } from "./AccountSettings";
+
 interface Preferences {
   theme: "kitsune" | "notion-dark" | "notion-light";
   notifications: boolean;
@@ -12,7 +14,17 @@ const INITIAL = loadPreferences();
 document.documentElement.dataset.theme = INITIAL.theme;
 document.documentElement.dataset.motion = INITIAL.animations ? "on" : "off";
 
-export function SettingsPanel() {
+interface SettingsPanelProps {
+  username: string;
+  onLogout: () => void;
+  onDeleteAccount: (password: string) => Promise<void>;
+}
+
+export function SettingsPanel({
+  username,
+  onLogout,
+  onDeleteAccount,
+}: SettingsPanelProps) {
   const [preferences, setPreferences] = useState(INITIAL);
 
   useEffect(() => {
@@ -92,6 +104,11 @@ export function SettingsPanel() {
         <Moon size={18} />
         As preferências ficam salvas neste dispositivo.
       </aside>
+      <AccountSettings
+        onDelete={onDeleteAccount}
+        onLogout={onLogout}
+        username={username}
+      />
     </section>
   );
 }

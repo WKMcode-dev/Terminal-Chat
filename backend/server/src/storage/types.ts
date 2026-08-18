@@ -64,6 +64,7 @@ export interface Repository {
   findUserByUsername(username: string): Promise<StoredUser | undefined>;
   findUserById(id: string): Promise<StoredUser | undefined>;
   listUsers(): Promise<StoredUser[]>;
+  deleteUser(userId: string): Promise<boolean>;
   updateProfile(userId: string, input: UpdateProfileInput): Promise<StoredUser>;
   updatePresence(
     userId: string,

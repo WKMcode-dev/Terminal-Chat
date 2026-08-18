@@ -65,4 +65,18 @@ describe("Terminal Chat protocol", () => {
       }).type,
     ).toBe("friend.request");
   });
+
+  it("requires a password and username confirmation to delete an account", () => {
+    const event = ClientEventSchema.parse({
+      type: "account.delete",
+      payload: {
+        password: "senha-segura-123",
+        confirmation: "@Kenneth".slice(1),
+      },
+    });
+    expect(event.type).toBe("account.delete");
+    if (event.type === "account.delete") {
+      expect(event.payload.confirmation).toBe("kenneth");
+    }
+  });
 });

@@ -216,7 +216,9 @@ async fn run_connected(
                 match incoming {
                     Some(Ok(Message::Text(text))) => {
                         if let Ok(event) = serde_json::from_str::<ServerEvent>(&text) {
+                            let account_deleted = matches!(&event, ServerEvent::AccountDeleted { .. });
                             let _ = events.send(event);
+                            if account_deleted { return true; }
                         }
                     }
                     Some(Ok(Message::Ping(payload))) => {

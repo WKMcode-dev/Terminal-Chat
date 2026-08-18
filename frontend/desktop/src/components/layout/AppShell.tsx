@@ -30,7 +30,10 @@ export function AppShell({ accessToken, realtime, onLogout }: AppShellProps) {
     () =>
       realtime.subscribe((event) => {
         applyEvent(event);
-        if (event.type === "error" && event.payload.code === "INVALID_SESSION")
+        if (
+          event.type === "account.deleted" ||
+          (event.type === "error" && event.payload.code === "INVALID_SESSION")
+        )
           onLogout();
       }),
     [applyEvent, onLogout, realtime],
@@ -101,6 +104,15 @@ export function AppShell({ accessToken, realtime, onLogout }: AppShellProps) {
     }
   }
 
+  async function deleteAccount(password: string) {
+    if (!store.currentUser) throw new Error("Sessão de usuário indisponível");
+    await api.deleteAccount(accessToken, {
+      password,
+      confirmation: store.currentUser.username,
+    });
+    onLogout();
+  }
+
   return (
     <main className="app-shell">
       <AppNavigation
@@ -138,7 +150,13 @@ export function AppShell({ accessToken, realtime, onLogout }: AppShellProps) {
             realtime={realtime}
           />
         )}
-        {store.view === "settings" && <SettingsPanel />}
+        {store.view === "settings" && store.currentUser && (
+          <SettingsPanel
+            onDeleteAccount={deleteAccount}
+            onLogout={onLogout}
+            username={store.currentUser.username}
+          />
+        )}
         {(store.view === "channels" || store.view === "conversations") &&
           target && (
             <ChatPanel

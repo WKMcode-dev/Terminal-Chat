@@ -4,6 +4,7 @@ use crate::app::Section;
 pub enum Command {
     Open(Section),
     Help,
+    Logout,
     Quit,
 }
 
@@ -17,7 +18,8 @@ impl Command {
                 Some(Self::Open(Section::Settings))
             }
             "/ajuda" | "/help" => Some(Self::Help),
-            "/sair" | "/quit" => Some(Self::Quit),
+            "/sair" | "/logout" | "/deslogar" => Some(Self::Logout),
+            "/quit" | "/fechar" => Some(Self::Quit),
             _ => None,
         }
     }
@@ -39,5 +41,11 @@ mod tests {
     #[test]
     fn ignores_regular_messages() {
         assert_eq!(Command::parse("Bora jogar?"), None);
+    }
+
+    #[test]
+    fn distinguishes_logout_from_closing_the_program() {
+        assert_eq!(Command::parse("/sair"), Some(Command::Logout));
+        assert_eq!(Command::parse("/quit"), Some(Command::Quit));
     }
 }

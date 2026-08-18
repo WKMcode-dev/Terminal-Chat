@@ -1,3 +1,4 @@
+mod account_dialog;
 mod channels;
 mod composer;
 mod contacts;
@@ -12,6 +13,7 @@ mod settings;
 mod terminal_size;
 mod voice_status;
 
+pub use account_dialog::render_account_dialog;
 pub use channels::render_channels;
 pub use composer::render_composer;
 pub use contacts::render_contacts;

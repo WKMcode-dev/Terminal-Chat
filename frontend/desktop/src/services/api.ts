@@ -1,11 +1,14 @@
 import {
   ApiErrorSchema,
+  DeleteAccountResponseSchema,
   AuthResponseSchema,
   BootstrapSchema,
   ChannelSchema,
   type AuthResponse,
   type Bootstrap,
   type Channel,
+  type DeleteAccountRequest,
+  type DeleteAccountResponse,
   type LoginRequest,
   type RegisterRequest,
 } from "@terminal-chat/protocol";
@@ -54,10 +57,21 @@ export const api = {
       ChannelSchema.parse,
     );
   },
+
+  deleteAccount(
+    token: string,
+    input: DeleteAccountRequest,
+  ): Promise<DeleteAccountResponse> {
+    return request(
+      "/account",
+      { method: "DELETE", token, body: input },
+      DeleteAccountResponseSchema.parse,
+    );
+  },
 };
 
 interface RequestOptions {
-  method?: "GET" | "POST";
+  method?: "GET" | "POST" | "DELETE";
   token?: string;
   body?: unknown;
 }

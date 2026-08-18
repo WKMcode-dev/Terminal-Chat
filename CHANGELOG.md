@@ -1,5 +1,22 @@
 # Histórico de versões
 
+## 2.3.0
+
+- adiciona busca instantânea de usuários por nome ou `@usuário` na CLI com
+  `/` ou `Ctrl+F`;
+- exibe **Sair e trocar conta** nas configurações da CLI e remove corretamente
+  a credencial salva antes de voltar ao login;
+- separa `/sair` (logout) de `/quit` (fechar o aplicativo);
+- adiciona exclusão permanente de conta na CLI e no desktop;
+- protege a exclusão em duas etapas, exigindo a frase `EXCLUIR @usuario` e a
+  senha atual;
+- remove em cascata perfil, mensagens, amizades e associações de canais no JSON
+  local e no PostgreSQL/Neon;
+- encerra todas as conexões da conta excluída e sincroniza a remoção com os
+  outros usuários em tempo real;
+- adiciona testes de protocolo, autenticação, persistência, busca e confirmação
+  das ações de conta.
+
 ## 2.2.1
 
 - instala explicitamente o provedor criptográfico `ring` antes de conexões TLS,

@@ -82,6 +82,56 @@ describe("Terminal Chat server", () => {
     ).toBe(401);
   });
 
+  it("deletes an authenticated account only with password and username confirmation", async () => {
+    const { server, dataFile } = await testServer();
+    const accessToken = await registerUser(server, {
+      username: "conta-descartavel",
+      displayName: "Conta Descartável",
+    });
+
+    const wrongPassword = await server.inject({
+      method: "DELETE",
+      url: "/account",
+      headers: { authorization: `Bearer ${accessToken}` },
+      payload: {
+        password: "senha-incorreta",
+        confirmation: "conta-descartavel",
+      },
+    });
+    expect(wrongPassword.statusCode).toBe(401);
+
+    const wrongConfirmation = await server.inject({
+      method: "DELETE",
+      url: "/account",
+      headers: { authorization: `Bearer ${accessToken}` },
+      payload: {
+        password: "senha-segura-123",
+        confirmation: "outro-usuario",
+      },
+    });
+    expect(wrongConfirmation.statusCode).toBe(400);
+
+    const deleted = await server.inject({
+      method: "DELETE",
+      url: "/account",
+      headers: { authorization: `Bearer ${accessToken}` },
+      payload: {
+        password: "senha-segura-123",
+        confirmation: "conta-descartavel",
+      },
+    });
+    expect(deleted.statusCode).toBe(200);
+    expect(deleted.json()).toMatchObject({ deleted: true });
+
+    const bootstrap = await server.inject({
+      method: "GET",
+      url: "/bootstrap",
+      headers: { authorization: `Bearer ${accessToken}` },
+    });
+    expect(bootstrap.statusCode).toBe(401);
+    expect(JSON.parse(await readFile(dataFile, "utf8")).users).toHaveLength(0);
+  });
+
   it("authenticates a WebSocket and persists a realtime message", async () => {
     const { server } = await testServer();
     const register = await server.inject({
@@ -224,6 +274,45 @@ describe("Terminal Chat server", () => {
     expect((await acceptedOnNaki).payload.status).toBe("accepted");
     kennethSocket.close();
     nakiSocket.close();
+  });
+
+  it("deletes an account through the authenticated realtime connection", async () => {
+    const { server } = await testServer();
+    const accessToken = await registerUser(server, {
+      username: "realtime-delete",
+      displayName: "Realtime Delete",
+    });
+    const socket = (await server.injectWS("/ws")) as unknown as TestSocket;
+    socket.send(
+      JSON.stringify({
+        type: "auth.resume",
+        payload: { accessToken },
+      }),
+    );
+    await nextSocketEventOfType(socket, "session.ready");
+
+    const deletedEvent = nextSocketEventOfType(socket, "account.deleted");
+    socket.send(
+      JSON.stringify({
+        type: "account.delete",
+        payload: {
+          password: "senha-segura-123",
+          confirmation: "realtime-delete",
+        },
+      }),
+    );
+    expect((await deletedEvent).payload.deleted).toBe(true);
+
+    const login = await server.inject({
+      method: "POST",
+      url: "/auth/login",
+      payload: {
+        username: "realtime-delete",
+        password: "senha-segura-123",
+      },
+    });
+    expect(login.statusCode).toBe(401);
+    socket.close();
   });
 });
 

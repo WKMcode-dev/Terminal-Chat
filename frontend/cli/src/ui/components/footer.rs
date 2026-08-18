@@ -20,7 +20,9 @@ pub fn render_footer(frame: &mut Frame, area: Rect, app: &App, theme: Theme, com
     let shortcuts = if let Some(notice) = app.notice.as_deref() {
         notice.to_owned()
     } else if app.section == crate::app::Section::Settings {
-        "As preferências são salvas automaticamente".to_owned()
+        "Enter executar  •  Sair/trocar conta e Excluir conta estão no final da lista".to_owned()
+    } else if app.section == crate::app::Section::Profiles {
+        "[/] ou Ctrl+F buscar  •  A adicionar/aceitar  •  M conversar  •  F1 ajuda".to_owned()
     } else if compact {
         format!(
             "Tab painéis  {bullet}  {area_shortcuts} áreas  {bullet}  F1 ajuda"

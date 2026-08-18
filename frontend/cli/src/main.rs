@@ -14,12 +14,18 @@ mod ui;
 mod voice;
 
 use anyhow::{Result, anyhow};
-use app::App;
+use app::{App, ExitReason};
 
 fn main() -> Result<()> {
     install_crypto_provider()?;
-    let (session, realtime) = session::connect_interactively()?;
-    ui::terminal::run(App::from_session(session, realtime))
+    loop {
+        let (session, realtime) = session::connect_interactively()?;
+        match ui::terminal::run(App::from_session(session, realtime))? {
+            ExitReason::Quit => return Ok(()),
+            ExitReason::Logout => session::delete_saved_token(),
+            ExitReason::Running => unreachable!("a interface só retorna depois de encerrar"),
+        }
+    }
 }
 
 fn install_crypto_provider() -> Result<()> {

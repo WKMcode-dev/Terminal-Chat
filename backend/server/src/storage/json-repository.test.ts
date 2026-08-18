@@ -49,4 +49,37 @@ describe("JsonRepository social profiles", () => {
     expect(await repository.removeFriendship(kenneth.id, naki.id)).toBe(true);
     await repository.close();
   });
+
+  it("removes the account and all of its related data", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "terminal-chat-delete-"));
+    const repository = new JsonRepository(join(directory, "data.json"));
+    await repository.init();
+    const kenneth = await repository.createUser({
+      username: "kenneth-delete",
+      displayName: "Kenneth",
+      passwordHash: "hash-a",
+    });
+    const naki = await repository.createUser({
+      username: "naki-delete",
+      displayName: "Naki",
+      passwordHash: "hash-b",
+    });
+    await repository.createFriendRequest(kenneth.id, naki.id);
+    await repository.createMessage({
+      clientId: "00000000-0000-4000-8000-000000000099",
+      scope: "direct",
+      targetId: naki.id,
+      authorId: kenneth.id,
+      body: "Mensagem descartável",
+    });
+
+    expect(await repository.deleteUser(kenneth.id)).toBe(true);
+    expect(await repository.findUserById(kenneth.id)).toBeUndefined();
+    expect(await repository.listFriendshipsForUser(naki.id)).toEqual([]);
+    expect(
+      await repository.listDirectMessages(naki.id, kenneth.id, 100),
+    ).toEqual([]);
+    expect(await repository.deleteUser(kenneth.id)).toBe(false);
+    await repository.close();
+  });
 });

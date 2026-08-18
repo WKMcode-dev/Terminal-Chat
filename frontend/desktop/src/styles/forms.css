@@ -116,6 +116,30 @@ select:focus {
   color: var(--text);
   background: var(--surface);
 }
+.secondary-button,
+.danger-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+.danger-button {
+  min-height: 37px;
+  padding: 8px 12px;
+  border: 1px solid color-mix(in srgb, var(--danger) 45%, var(--border));
+  border-radius: 9px;
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 10%, var(--surface));
+  font-weight: 800;
+}
+.danger-button:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--danger) 18%, var(--surface));
+}
+.danger-button:disabled,
+.secondary-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
 .text-button {
   width: 100%;
   margin-top: 17px;
@@ -255,6 +279,28 @@ select:focus {
   gap: 11px;
   padding: 18px;
   border-bottom: 1px solid var(--border);
+}
+.dialog-icon.danger {
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+}
+.dialog-body {
+  padding: 18px;
+}
+.dialog-body > p {
+  margin: 0 0 18px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+.dialog-body label strong {
+  color: var(--danger);
+}
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 9px;
+  padding: 0 18px 18px;
 }
 .dialog > header h2 {
   font-size: 1rem;

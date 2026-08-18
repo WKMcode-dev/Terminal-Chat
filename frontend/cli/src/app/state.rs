@@ -17,8 +17,24 @@ use crate::{channels::sample_channels, chat::sample_conversations, profiles::sam
 
 use super::{Focus, Section};
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AccountDialog {
+    Logout,
+    DeleteConfirmation,
+    DeletePassword,
+    DeletePending,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ExitReason {
+    Running,
+    Quit,
+    Logout,
+}
+
 pub struct App {
     pub self_user_id: String,
+    pub account_username: String,
     pub username: String,
     pub section: Section,
     pub focus: Focus,
@@ -32,6 +48,8 @@ pub struct App {
     pub selected_channel: usize,
     pub active_channel: usize,
     pub selected_profile: usize,
+    pub profile_search: InputBuffer,
+    pub profile_search_active: bool,
     pub selected_setting: usize,
     pub selected_message: usize,
     pub input: InputBuffer,
@@ -41,6 +59,8 @@ pub struct App {
     pub show_emoji_picker: bool,
     pub selected_emoji: usize,
     pub notice: Option<String>,
+    pub account_dialog: Option<AccountDialog>,
+    pub account_input: InputBuffer,
     pub connected: bool,
     pub voice_connected: bool,
     pub microphone_test_active: bool,
@@ -48,7 +68,7 @@ pub struct App {
     pub voice_room_id: Option<String>,
     pub realtime: Option<RealtimeClient>,
     pub voice: VoiceEngine,
-    should_quit: bool,
+    exit_reason: ExitReason,
 }
 
 #[cfg(test)]
@@ -70,6 +90,7 @@ impl Default for App {
 
         Self {
             self_user_id: "00000000-0000-4000-8000-000000000001".to_owned(),
+            account_username: "kenneth".to_owned(),
             username: "Kenneth Kitsune".to_owned(),
             section: Section::Conversations,
             focus: Focus::Composer,
@@ -83,6 +104,8 @@ impl Default for App {
             selected_channel: 0,
             active_channel: 0,
             selected_profile: 0,
+            profile_search: InputBuffer::default(),
+            profile_search_active: false,
             selected_setting: 0,
             selected_message,
             input: InputBuffer::default(),
@@ -92,6 +115,8 @@ impl Default for App {
             show_emoji_picker: false,
             selected_emoji: 0,
             notice,
+            account_dialog: None,
+            account_input: InputBuffer::default(),
             connected: false,
             voice_connected: false,
             microphone_test_active: false,
@@ -99,7 +124,7 @@ impl Default for App {
             voice_room_id: None,
             realtime: None,
             voice: VoiceEngine::default(),
-            should_quit: false,
+            exit_reason: ExitReason::Running,
         }
     }
 }
@@ -107,7 +132,7 @@ impl Default for App {
 impl App {
     pub fn from_session(session: SessionReady, realtime: RealtimeClient) -> Self {
         let (settings, notice) = match settings::load() {
-            Ok(settings) => (settings, Some("Conectado ao Terminal Chat v2.2.1".to_owned())),
+            Ok(settings) => (settings, Some("Conectado ao Terminal Chat v2.3.0".to_owned())),
             Err(_) => (
                 UserSettings::default(),
                 Some("Configuração inválida; usando os valores padrão".to_owned()),
@@ -115,6 +140,7 @@ impl App {
         };
         let mut app = Self {
             self_user_id: session.bootstrap.current_user.id.clone(),
+            account_username: session.bootstrap.current_user.username.clone(),
             username: session.bootstrap.current_user.display_name.clone(),
             section: Section::Conversations,
             focus: Focus::Composer,
@@ -128,6 +154,8 @@ impl App {
             selected_channel: 0,
             active_channel: 0,
             selected_profile: 0,
+            profile_search: InputBuffer::default(),
+            profile_search_active: false,
             selected_setting: 0,
             selected_message: 0,
             input: InputBuffer::default(),
@@ -137,6 +165,8 @@ impl App {
             show_emoji_picker: false,
             selected_emoji: 0,
             notice,
+            account_dialog: None,
+            account_input: InputBuffer::default(),
             connected: true,
             voice_connected: false,
             microphone_test_active: false,
@@ -144,7 +174,7 @@ impl App {
             voice_room_id: None,
             realtime: Some(realtime),
             voice: VoiceEngine::default(),
-            should_quit: false,
+            exit_reason: ExitReason::Running,
         };
         app.apply_bootstrap(session.bootstrap);
         app
@@ -159,7 +189,11 @@ impl App {
     }
 
     pub fn should_quit(&self) -> bool {
-        self.should_quit
+        self.exit_reason != ExitReason::Running
+    }
+
+    pub const fn exit_reason(&self) -> ExitReason {
+        self.exit_reason
     }
 
     pub fn quit(&mut self) {
@@ -167,7 +201,15 @@ impl App {
             let _ = realtime.send(crate::protocol::ClientEvent::VoiceLeave { room_id });
         }
         self.voice.stop();
-        self.should_quit = true;
+        self.exit_reason = ExitReason::Quit;
+    }
+
+    pub fn logout(&mut self) {
+        if let (Some(realtime), Some(room_id)) = (self.realtime.as_ref(), self.voice_room_id.take()) {
+            let _ = realtime.send(crate::protocol::ClientEvent::VoiceLeave { room_id });
+        }
+        self.voice.stop();
+        self.exit_reason = ExitReason::Logout;
     }
 
     fn apply_server_event(&mut self, event: ServerEvent) {
@@ -183,6 +225,9 @@ impl App {
                     "RECONNECTING" | "CONNECTION_LOST" | "INVALID_SESSION"
                 ) {
                     self.connected = false;
+                }
+                if self.account_dialog == Some(AccountDialog::DeletePending) {
+                    self.account_dialog = Some(AccountDialog::DeletePassword);
                 }
                 self.notice = Some(error.message);
             }
@@ -201,6 +246,13 @@ impl App {
             }
             ServerEvent::PresenceChanged(user) | ServerEvent::ProfileUpdated(user) => {
                 self.update_user(user)
+            }
+            ServerEvent::ProfileRemoved { user_id } => self.remove_user(&user_id),
+            ServerEvent::AccountDeleted { deleted, user_id } => {
+                if deleted && user_id == self.self_user_id {
+                    self.account_dialog = None;
+                    self.logout();
+                }
             }
             ServerEvent::FriendshipChanged(friendship) => {
                 if let Some(existing) = self
@@ -265,6 +317,7 @@ impl App {
 
     fn apply_bootstrap(&mut self, mut bootstrap: Bootstrap) {
         self.self_user_id = bootstrap.current_user.id.clone();
+        self.account_username = bootstrap.current_user.username.clone();
         self.username = bootstrap.current_user.display_name.clone();
         self.profiles = bootstrap
             .profiles
@@ -310,6 +363,9 @@ impl App {
         self.active_conversation = self.active_conversation.min(self.conversations.len().saturating_sub(1));
         self.selected_channel = self.selected_channel.min(self.channels.len().saturating_sub(1));
         self.active_channel = self.active_channel.min(self.channels.len().saturating_sub(1));
+        self.selected_profile = self
+            .selected_profile
+            .min(self.visible_profile_count().saturating_sub(1));
         self.reset_message_selection();
     }
 
@@ -401,6 +457,24 @@ impl App {
         for channel in &mut self.channels {
             channel.members_online = online;
         }
+    }
+
+    fn remove_user(&mut self, user_id: &str) {
+        self.profiles.retain(|profile| profile.id != user_id);
+        self.conversations
+            .retain(|conversation| conversation.contact.id != user_id);
+        self.friendships.retain(|friendship| {
+            friendship.requester_id != user_id && friendship.addressee_id != user_id
+        });
+        self.selected_profile = self
+            .selected_profile
+            .min(self.visible_profile_count().saturating_sub(1));
+        self.selected_conversation = self
+            .selected_conversation
+            .min(self.conversations.len().saturating_sub(1));
+        self.active_conversation = self
+            .active_conversation
+            .min(self.conversations.len().saturating_sub(1));
     }
 }
 

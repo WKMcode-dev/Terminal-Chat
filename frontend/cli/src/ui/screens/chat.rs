@@ -8,7 +8,7 @@ use crate::app::{App, Focus};
 
 use super::super::{
     components::{
-        render_channels, render_composer, render_contacts, render_emoji_picker, render_footer, render_header,
+        render_account_dialog, render_channels, render_composer, render_contacts, render_emoji_picker, render_footer, render_header,
         render_help, render_messages, render_navigation, render_profile_details, render_profiles,
         render_settings, render_terminal_too_small, render_voice_status,
     },
@@ -76,6 +76,9 @@ pub fn render(frame: &mut Frame, app: &App) {
     }
     if app.show_emoji_picker {
         render_emoji_picker(frame, app, theme);
+    }
+    if app.account_dialog.is_some() {
+        render_account_dialog(frame, app, theme);
     }
 }
 

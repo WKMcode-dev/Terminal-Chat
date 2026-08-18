@@ -1,6 +1,10 @@
 import { hash, verify } from "argon2";
 
-import type { LoginRequest, RegisterRequest } from "@terminal-chat/protocol";
+import type {
+  DeleteAccountRequest,
+  LoginRequest,
+  RegisterRequest,
+} from "@terminal-chat/protocol";
 
 import { AppError } from "../errors.js";
 import type { Repository, StoredUser } from "../storage/index.js";
@@ -70,6 +74,32 @@ export class AuthService {
         401,
       );
     return user;
+  }
+
+  async deleteAccount(
+    userId: string,
+    input: DeleteAccountRequest,
+  ): Promise<void> {
+    const user = await this.repository.findUserById(userId);
+    if (!user) {
+      throw new AppError("USER_NOT_FOUND", "Essa conta não existe", 404);
+    }
+    if (input.confirmation !== user.username) {
+      throw new AppError(
+        "ACCOUNT_CONFIRMATION_INVALID",
+        "A confirmação não corresponde ao seu @usuário",
+      );
+    }
+    if (!(await verify(user.passwordHash, input.password))) {
+      throw new AppError(
+        "INVALID_PASSWORD",
+        "A senha informada está incorreta",
+        401,
+      );
+    }
+    if (!(await this.repository.deleteUser(user.id))) {
+      throw new AppError("USER_NOT_FOUND", "Essa conta não existe", 404);
+    }
   }
 
   createToken(user: StoredUser): string {

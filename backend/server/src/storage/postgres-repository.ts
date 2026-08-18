@@ -132,6 +132,13 @@ export class PostgresRepository implements Repository {
     return rows.map((row) => mapUser(row as Row));
   }
 
+  async deleteUser(userId: string): Promise<boolean> {
+    const rows = await this.sql`
+      delete from users where id = ${userId} returning id
+    `;
+    return rows.length > 0;
+  }
+
   async updateProfile(
     userId: string,
     input: UpdateProfileInput,

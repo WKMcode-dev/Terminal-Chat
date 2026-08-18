@@ -1,6 +1,6 @@
 {
   "name": "terminal-chat",
-  "version": "2.2.1",
+  "version": "2.3.0",
   "description": "Chat multiplataforma em tempo real para terminal e desktop",
   "main": "index.js",
   "scripts": {

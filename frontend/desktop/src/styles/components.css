@@ -682,3 +682,41 @@
     display: none;
   }
 }
+.account-settings {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-top: 18px;
+  padding: 18px;
+  border: 1px solid color-mix(in srgb, var(--danger) 28%, var(--border));
+  border-radius: 13px;
+  background: color-mix(in srgb, var(--danger) 5%, var(--panel));
+}
+.account-settings strong,
+.account-settings small {
+  display: block;
+}
+.account-settings small {
+  margin-top: 5px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+.account-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+@media (max-width: 720px) {
+  .account-settings {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .account-actions {
+    justify-content: stretch;
+  }
+  .account-actions > button {
+    flex: 1 1 180px;
+  }
+}

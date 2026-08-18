@@ -4,7 +4,7 @@ use anyhow::Result;
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 
 use crate::{
-    app::{App, Focus, MessageMovement, Section},
+    app::{AccountDialog, App, Focus, MessageMovement, Section},
     settings::SettingDirection,
 };
 
@@ -15,6 +15,18 @@ pub fn poll_and_handle(app: &mut App) -> Result<()> {
                 if matches!(key.kind, KeyEventKind::Press | KeyEventKind::Repeat) =>
             {
                 handle_key(app, key)
+            }
+            Event::Paste(value)
+                if matches!(
+                    app.account_dialog,
+                    Some(AccountDialog::DeleteConfirmation | AccountDialog::DeletePassword)
+                ) =>
+            {
+                app.account_input.insert_str(&value)
+            }
+            Event::Paste(value) if app.profile_search_active => {
+                app.profile_search.insert_str(&value);
+                app.profile_search_changed();
             }
             Event::Paste(value)
                 if app.focus == Focus::Composer && app.section.is_messaging() =>
@@ -30,8 +42,20 @@ pub fn poll_and_handle(app: &mut App) -> Result<()> {
 fn handle_key(app: &mut App, key: KeyEvent) {
     let control = key.modifiers.contains(KeyModifiers::CONTROL);
     let alt = key.modifiers.contains(KeyModifiers::ALT);
+    let shift = key.modifiers.contains(KeyModifiers::SHIFT);
 
-    if control && !alt && key.code == KeyCode::Char('q') {
+    if app.account_dialog.is_some() {
+        handle_account_dialog_key(app, key);
+        return;
+    }
+
+    if control && shift && !alt && matches!(key.code, KeyCode::Char('q' | 'Q')) {
+        app.selected_setting = crate::settings::UserSettings::ROW_COUNT;
+        app.activate_setting();
+        return;
+    }
+
+    if control && !shift && !alt && matches!(key.code, KeyCode::Char('q' | 'Q')) {
         app.quit();
         return;
     }
@@ -61,6 +85,20 @@ fn handle_key(app: &mut App, key: KeyEvent) {
             KeyCode::Enter => app.insert_selected_emoji(),
             _ => {}
         }
+        return;
+    }
+
+    let profile_search_shortcut =
+        app.section == Section::Profiles
+            && ((control && !alt && matches!(key.code, KeyCode::Char('f' | 'F')))
+                || (!control && !alt && key.code == KeyCode::Char('/')));
+    if profile_search_shortcut {
+        app.open_profile_search();
+        return;
+    }
+
+    if app.profile_search_active {
+        handle_profile_search_key(app, key);
         return;
     }
 
@@ -189,9 +227,8 @@ fn handle_content_key(app: &mut App, key_code: KeyCode) {
             KeyCode::Up | KeyCode::Char('k') => app.previous_list_item(),
             KeyCode::Down | KeyCode::Char('j') => app.next_list_item(),
             KeyCode::Left => app.change_setting(SettingDirection::Previous),
-            KeyCode::Right | KeyCode::Enter | KeyCode::Char(' ') => {
-                app.change_setting(SettingDirection::Next)
-            }
+            KeyCode::Right => app.change_setting(SettingDirection::Next),
+            KeyCode::Enter | KeyCode::Char(' ') => app.activate_setting(),
             _ => {}
         },
     }
@@ -229,6 +266,62 @@ fn accepts_text_input(modifiers: KeyModifiers) -> bool {
     let alt = modifiers.contains(KeyModifiers::ALT);
 
     !control || alt
+}
+
+fn handle_profile_search_key(app: &mut App, key: KeyEvent) {
+    match key.code {
+        KeyCode::Esc if !app.profile_search.value().is_empty() => app.clear_profile_search(),
+        KeyCode::Esc | KeyCode::Enter => app.close_profile_search(),
+        KeyCode::Backspace => {
+            app.profile_search.backspace();
+            app.profile_search_changed();
+        }
+        KeyCode::Delete => {
+            app.profile_search.delete();
+            app.profile_search_changed();
+        }
+        KeyCode::Left => app.profile_search.move_left(),
+        KeyCode::Right => app.profile_search.move_right(),
+        KeyCode::Home => app.profile_search.move_home(),
+        KeyCode::End => app.profile_search.move_end(),
+        KeyCode::Char(character) if accepts_text_input(key.modifiers) => {
+            app.profile_search.insert_char(character);
+            app.profile_search_changed();
+        }
+        _ => {}
+    }
+}
+
+fn handle_account_dialog_key(app: &mut App, key: KeyEvent) {
+    match app.account_dialog {
+        Some(AccountDialog::Logout) => match key.code {
+            KeyCode::Enter | KeyCode::Char('s' | 'S' | 'y' | 'Y') => app.confirm_logout(),
+            KeyCode::Esc | KeyCode::Char('n' | 'N') => app.cancel_account_dialog(),
+            _ => {}
+        },
+        Some(AccountDialog::DeleteConfirmation | AccountDialog::DeletePassword) => {
+            match key.code {
+                KeyCode::Esc => app.cancel_account_dialog(),
+                KeyCode::Enter
+                    if app.account_dialog == Some(AccountDialog::DeleteConfirmation) =>
+                {
+                    app.confirm_delete_phrase()
+                }
+                KeyCode::Enter => app.submit_account_deletion(),
+                KeyCode::Backspace => app.account_input.backspace(),
+                KeyCode::Delete => app.account_input.delete(),
+                KeyCode::Left => app.account_input.move_left(),
+                KeyCode::Right => app.account_input.move_right(),
+                KeyCode::Home => app.account_input.move_home(),
+                KeyCode::End => app.account_input.move_end(),
+                KeyCode::Char(character) if accepts_text_input(key.modifiers) => {
+                    app.account_input.insert_char(character)
+                }
+                _ => {}
+            }
+        }
+        Some(AccountDialog::DeletePending) | None => {}
+    }
 }
 
 #[cfg(test)]

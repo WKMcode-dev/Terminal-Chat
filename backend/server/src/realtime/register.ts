@@ -234,6 +234,21 @@ export function registerRealtime(
           });
           break;
         }
+        case "account.delete": {
+          socialLimiter.consume(user.id);
+          await auth.deleteAccount(user.id, event.payload);
+          hub.sendUsers([user.id], {
+            type: "account.deleted",
+            payload: { deleted: true, userId: user.id },
+          });
+          hub.broadcast({
+            type: "profile.removed",
+            payload: { userId: user.id },
+          });
+          currentUser = undefined;
+          hub.closeUser(user.id, 1000, "account-deleted");
+          break;
+        }
         case "typing.update":
           await publishTyping(event, user);
           break;
@@ -349,13 +364,11 @@ export function registerRealtime(
       if (closed) return;
       closed = true;
       if (!currentUser) return;
-      const stillOnline = hub.remove(currentUser.id, socket);
-      if (!stillOnline) {
-        const offline = await repository.updatePresence(
-          currentUser.id,
-          "offline",
-          "",
-        );
+      const userId = currentUser.id;
+      currentUser = undefined;
+      const stillOnline = hub.remove(userId, socket);
+      if (!stillOnline && (await repository.findUserById(userId))) {
+        const offline = await repository.updatePresence(userId, "offline", "");
         hub.broadcast({
           type: "presence.changed",
           payload: toPublicUser(offline),

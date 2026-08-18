@@ -39,6 +39,11 @@ export class RealtimeHub {
     }
   }
 
+  closeUser(userId: string, code = 1000, reason = "session-ended"): void {
+    const sockets = [...(this.users.get(userId) ?? [])];
+    for (const socket of sockets) socket.close(code, reason);
+  }
+
   joinRoom(roomId: string, userId: string, socket: SocketLike): void {
     const participants =
       this.rooms.get(roomId) ?? new Map<string, Set<SocketLike>>();

@@ -10,11 +10,11 @@ use crossterm::{
 };
 use ratatui::{Terminal, backend::CrosstermBackend};
 
-use crate::{app::App, events};
+use crate::{app::{App, ExitReason}, events};
 
 type AppTerminal = Terminal<CrosstermBackend<Stdout>>;
 
-pub fn run(mut app: App) -> Result<()> {
+pub fn run(mut app: App) -> Result<ExitReason> {
     let mut session = TerminalSession::start()?;
 
     while !app.should_quit() {
@@ -23,7 +23,9 @@ pub fn run(mut app: App) -> Result<()> {
         events::poll_and_handle(&mut app)?;
     }
 
-    session.restore()
+    let exit_reason = app.exit_reason();
+    session.restore()?;
+    Ok(exit_reason)
 }
 
 struct TerminalSession {

@@ -7,9 +7,11 @@ use crate::{
     settings::{self, SettingDirection, UserSettings},
 };
 
-use super::{App, Focus, MessageMovement, Section};
+use super::{AccountDialog, App, Focus, MessageMovement, Section};
 
 impl App {
+    pub const SETTINGS_ROW_COUNT: usize = UserSettings::ROW_COUNT + 2;
+
     pub fn toggle_emoji_picker(&mut self) {
         if !self.section.is_messaging() || self.focus != Focus::Composer {
             self.notice = Some("Abra o campo de mensagem para escolher um emoji".to_owned());
@@ -53,10 +55,10 @@ impl App {
                 self.selected_channel = next(self.selected_channel, self.channels.len())
             }
             Section::Profiles => {
-                self.selected_profile = next(self.selected_profile, self.profiles.len())
+                self.selected_profile = next(self.selected_profile, self.visible_profile_count())
             }
             Section::Settings => {
-                self.selected_setting = next(self.selected_setting, UserSettings::ROW_COUNT)
+                self.selected_setting = next(self.selected_setting, Self::SETTINGS_ROW_COUNT)
             }
         }
     }
@@ -71,10 +73,10 @@ impl App {
                 self.selected_channel = previous(self.selected_channel, self.channels.len())
             }
             Section::Profiles => {
-                self.selected_profile = previous(self.selected_profile, self.profiles.len())
+                self.selected_profile = previous(self.selected_profile, self.visible_profile_count())
             }
             Section::Settings => {
-                self.selected_setting = previous(self.selected_setting, UserSettings::ROW_COUNT)
+                self.selected_setting = previous(self.selected_setting, Self::SETTINGS_ROW_COUNT)
             }
         }
     }
@@ -98,7 +100,7 @@ impl App {
                 }
             }
             Section::Profiles => self.focus = Focus::Content,
-            Section::Settings => self.change_setting(SettingDirection::Next),
+            Section::Settings => self.activate_setting(),
         }
     }
 
@@ -107,7 +109,58 @@ impl App {
     }
 
     pub fn selected_profile(&self) -> Option<&Profile> {
-        self.profiles.get(self.selected_profile)
+        self.visible_profile_indices()
+            .get(self.selected_profile)
+            .and_then(|index| self.profiles.get(*index))
+    }
+
+    pub fn visible_profile_indices(&self) -> Vec<usize> {
+        let query = self
+            .profile_search
+            .value()
+            .trim()
+            .trim_start_matches('@')
+            .to_lowercase();
+        self.profiles
+            .iter()
+            .enumerate()
+            .filter_map(|(index, profile)| {
+                let matches = query.is_empty()
+                    || profile.display_name.to_lowercase().contains(&query)
+                    || profile
+                        .handle
+                        .trim_start_matches('@')
+                        .to_lowercase()
+                        .contains(&query);
+                matches.then_some(index)
+            })
+            .collect()
+    }
+
+    pub fn visible_profile_count(&self) -> usize {
+        self.visible_profile_indices().len()
+    }
+
+    pub fn open_profile_search(&mut self) {
+        self.switch_section(Section::Profiles, true);
+        self.show_help = false;
+        self.profile_search_active = true;
+        self.selected_profile = 0;
+        self.notice = Some("Digite um nome ou @usuário; a lista é filtrada em tempo real".to_owned());
+    }
+
+    pub fn close_profile_search(&mut self) {
+        self.profile_search_active = false;
+        self.focus = Focus::List;
+    }
+
+    pub fn clear_profile_search(&mut self) {
+        self.profile_search.clear();
+        self.selected_profile = 0;
+    }
+
+    pub fn profile_search_changed(&mut self) {
+        self.selected_profile = 0;
     }
 
     pub fn selected_profile_relationship(&self) -> ProfileRelationship {
@@ -308,6 +361,9 @@ impl App {
     }
 
     pub fn change_setting(&mut self, direction: SettingDirection) {
+        if self.selected_setting >= UserSettings::ROW_COUNT {
+            return;
+        }
         if !self.settings.change(self.selected_setting, direction) {
             return;
         }
@@ -315,6 +371,74 @@ impl App {
         self.notice = Some(match settings::save(&self.settings) {
             Ok(()) => "Preferências salvas automaticamente".to_owned(),
             Err(_) => "Não foi possível salvar as preferências".to_owned(),
+        });
+    }
+
+    pub fn activate_setting(&mut self) {
+        match self.selected_setting {
+            index if index < UserSettings::ROW_COUNT => {
+                self.change_setting(SettingDirection::Next)
+            }
+            index if index == UserSettings::ROW_COUNT => {
+                self.account_input.clear();
+                self.account_dialog = Some(AccountDialog::Logout);
+            }
+            _ => {
+                self.account_input.clear();
+                self.account_dialog = Some(AccountDialog::DeleteConfirmation);
+            }
+        }
+    }
+
+    pub fn delete_confirmation_phrase(&self) -> String {
+        format!("EXCLUIR @{}", self.account_username)
+    }
+
+    pub fn cancel_account_dialog(&mut self) {
+        if self.account_dialog == Some(AccountDialog::DeletePending) {
+            return;
+        }
+        self.account_dialog = None;
+        self.account_input.clear();
+        self.notice = Some("Ação cancelada; nenhum dado foi alterado".to_owned());
+    }
+
+    pub fn confirm_logout(&mut self) {
+        self.account_dialog = None;
+        self.account_input.clear();
+        self.logout();
+    }
+
+    pub fn confirm_delete_phrase(&mut self) {
+        if self.account_input.value().trim() != self.delete_confirmation_phrase() {
+            self.notice = Some("A frase de confirmação não corresponde ao solicitado".to_owned());
+            return;
+        }
+        self.account_input.clear();
+        self.account_dialog = Some(AccountDialog::DeletePassword);
+        self.notice = Some("Agora informe sua senha para confirmar a exclusão".to_owned());
+    }
+
+    pub fn submit_account_deletion(&mut self) {
+        let password = self.account_input.value().to_owned();
+        if password.len() < 8 {
+            self.notice = Some("A senha precisa ter pelo menos 8 caracteres".to_owned());
+            return;
+        }
+        self.account_input.clear();
+        let event = ClientEvent::AccountDelete {
+            password,
+            confirmation: self.account_username.clone(),
+        };
+        self.notice = Some(match self.realtime.as_ref() {
+            Some(realtime) => match realtime.send(event) {
+                Ok(()) => {
+                    self.account_dialog = Some(AccountDialog::DeletePending);
+                    "Excluindo a conta com segurança...".to_owned()
+                }
+                Err(error) => format!("Não foi possível solicitar a exclusão: {error}"),
+            },
+            None => "A exclusão requer conexão com o servidor".to_owned(),
         });
     }
 
@@ -440,6 +564,10 @@ impl App {
         match command {
             Command::Open(section) => self.switch_section(section, true),
             Command::Help => self.show_help = true,
+            Command::Logout => {
+                self.account_input.clear();
+                self.account_dialog = Some(AccountDialog::Logout);
+            }
             Command::Quit => self.quit(),
         }
     }

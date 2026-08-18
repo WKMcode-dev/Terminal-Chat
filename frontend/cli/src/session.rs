@@ -30,7 +30,7 @@ pub fn connect_interactively() -> Result<(SessionReady, RealtimeClient)> {
         }
     }
 
-    println!("\nTerminal Chat v2.2.1 — conexão segura");
+    println!("\nTerminal Chat v2.3.0 — conexão segura");
     println!("Servidor: {server_url}\n");
     for _ in 0..3 {
         let mode = read_line("[1] Entrar  [2] Criar conta: ")?;
@@ -176,6 +176,7 @@ fn saved_token() -> Option<String> {
         .ok()?
         .get_password()
         .ok()
+        .filter(|token| token.len() >= 20)
 }
 
 fn save_token(token: &str) {
@@ -184,9 +185,11 @@ fn save_token(token: &str) {
     }
 }
 
-fn delete_saved_token() {
+pub fn delete_saved_token() {
     if let Ok(entry) = keyring::Entry::new(KEYRING_SERVICE, KEYRING_ACCOUNT) {
-        let _ = entry.delete_credential();
+        if entry.delete_credential().is_err() {
+            let _ = entry.set_password("");
+        }
     }
 }
 

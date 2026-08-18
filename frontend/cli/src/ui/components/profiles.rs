@@ -1,6 +1,6 @@
 use ratatui::{
     Frame,
-    layout::Rect,
+    layout::{Constraint, Layout, Rect},
     style::{Modifier, Style},
     text::{Line, Span},
     widgets::{Block, BorderType, Borders, List, ListItem, ListState, Paragraph, Wrap},
@@ -14,7 +14,18 @@ use crate::{
 use super::{super::theme::Theme, contacts::presence_badge};
 
 pub fn render_profiles(frame: &mut Frame, area: Rect, app: &App, theme: Theme) {
-    let items = app.profiles.iter().map(|profile| {
+    let [search_area, list_area] = Layout::vertical([
+        Constraint::Length(3),
+        Constraint::Min(3),
+    ])
+    .areas(area);
+    render_profile_search(frame, search_area, app, theme);
+
+    let visible_indices = app.visible_profile_indices();
+    let mut items = visible_indices
+        .iter()
+        .filter_map(|index| app.profiles.get(*index))
+        .map(|profile| {
         let (presence, presence_style) =
             presence_badge(profile.presence, app.settings.glyph_mode, theme);
         let you = if profile.is_current_user { "  você" } else { "" };
@@ -37,13 +48,20 @@ pub fn render_profiles(frame: &mut Frame, area: Rect, app: &App, theme: Theme) {
                 Style::default().fg(theme.subtle),
             ),
         ])
-    });
+    })
+        .collect::<Vec<_>>();
+    if items.is_empty() {
+        items.push(ListItem::new(Line::styled(
+            "Nenhum usuário encontrado",
+            Style::default().fg(theme.subtle),
+        )));
+    }
 
     let focused = app.focus == Focus::List;
     let list = List::new(items)
         .block(
             Block::default()
-                .title(" Perfis ")
+                .title(format!(" Perfis ({}) ", visible_indices.len()))
                 .title_style(if focused {
                     theme.title()
                 } else {
@@ -57,8 +75,38 @@ pub fn render_profiles(frame: &mut Frame, area: Rect, app: &App, theme: Theme) {
         .highlight_symbol(app.settings.glyph_mode.selector());
 
     let mut state = ListState::default();
-    state.select(Some(app.selected_profile));
-    frame.render_stateful_widget(list, area, &mut state);
+    state.select(
+        (!visible_indices.is_empty())
+            .then_some(app.selected_profile.min(visible_indices.len().saturating_sub(1))),
+    );
+    frame.render_stateful_widget(list, list_area, &mut state);
+}
+
+fn render_profile_search(frame: &mut Frame, area: Rect, app: &App, theme: Theme) {
+    let focused = app.profile_search_active;
+    let available_width = area.width.saturating_sub(4) as usize;
+    let (visible, cursor) = app.profile_search.viewport(available_width);
+    let text = if visible.is_empty() && !focused {
+        "Pressione / ou Ctrl+F para buscar".to_owned()
+    } else {
+        visible
+    };
+    frame.render_widget(
+        Paragraph::new(text)
+            .style(Style::default().fg(if focused { theme.text } else { theme.subtle }))
+            .block(
+                Block::default()
+                    .title(" Buscar nome ou @usuário ")
+                    .title_style(if focused { theme.title() } else { Style::default().fg(theme.subtle) })
+                    .borders(Borders::ALL)
+                    .border_type(BorderType::Rounded)
+                    .border_style(theme.border(focused)),
+            ),
+        area,
+    );
+    if focused {
+        frame.set_cursor_position((area.x + 1 + cursor, area.y + 1));
+    }
 }
 
 pub fn render_profile_details(frame: &mut Frame, area: Rect, app: &App, theme: Theme) {

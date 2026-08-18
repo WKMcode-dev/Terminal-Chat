@@ -1,4 +1,4 @@
-# 💬 Terminal Chat v2.2.1
+# 💬 Terminal Chat v2.3.0
 
 Chat em tempo real com dois clientes: uma interface completa no terminal e um
 aplicativo desktop em Tauri. Ambos usam o mesmo servidor, as mesmas contas, os
@@ -22,6 +22,8 @@ mesmos canais, o mesmo histórico e as mesmas salas de voz.
 - perfis editáveis com avatar em emoji, bio e atividade;
 - solicitações de amizade, aceite, remoção, bloqueio e desbloqueio;
 - busca por nome ou `@usuário` e filtros de amigos, solicitações e bloqueios;
+- logout e troca de conta sem precisar fechar o terminal;
+- exclusão protegida por frase de confirmação e senha, com remoção permanente;
 - abertura de conversas e chamadas diretamente pelos perfis;
 - seletor interno de emojis no terminal e no desktop;
 - interface CLI responsiva, UTF-8 e compatível com teclado ABNT2;
@@ -106,15 +108,17 @@ preparados automaticamente pelo servidor.
 | `F4`                       | Entra ou sai da voz da conversa/canal atual |
 | `F9`                       | Testa o microfone com retorno e medidor     |
 | `Win+.` / `F10` / `Ctrl+E` | Abre o seletor interno de emojis            |
+| `/` / `Ctrl+F`             | Busca usuários na área Perfis               |
 | `Ctrl+C`                   | Copia a mensagem selecionada                |
 | `Ctrl+Q`                   | Encerra o aplicativo                        |
+| `Ctrl+Shift+Q`             | Sai da conta e volta ao login               |
 
 `F5–F8`, `Alt+1–4`, `Ctrl+1–4` e `Ctrl+Tab` continuam como aliases quando o
 terminal os transmitir. A navegação principal evita depender deles porque CMD e
 PowerShell podem interceptar essas combinações.
 
 Também existem os comandos `/conversas`, `/canais`, `/perfis`, `/config`,
-`/ajuda` e `/sair`.
+`/ajuda`, `/sair` (logout) e `/quit` (fechar o aplicativo).
 
 ## 👥 Perfis e amizades
 
@@ -134,8 +138,29 @@ Na CLI, selecione um perfil e use:
 | `M`   | Abre a conversa direta                       |
 | `F4`  | Inicia ou encerra a chamada com esse usuário |
 
+Pressione `/` ou `Ctrl+F` em **Perfis**, digite parte do nome ou o
+`@usuário` e confirme com `Enter`. `Esc` limpa a busca e, quando ela já estiver
+vazia, retorna à lista.
+
 Perfis, amizades e bloqueios são persistidos tanto no armazenamento local
 quanto no PostgreSQL e sincronizados em tempo real entre CLI e desktop.
+
+## 🔑 Conta, logout e exclusão
+
+Na CLI, abra **Configurações** e selecione **Sair e trocar conta** para remover
+a sessão salva no Gerenciador de Credenciais do Windows e voltar ao login. O
+atalho `Ctrl+Shift+Q` e o comando `/sair` abrem a mesma confirmação. `Ctrl+Q` e
+`/quit` apenas fecham o programa e preservam a sessão.
+
+**Excluir conta** fica no final das Configurações da CLI e na área de conta do
+desktop. Para impedir exclusões acidentais, o aplicativo exige duas etapas:
+
+1. digitar exatamente `EXCLUIR @seu_usuario`;
+2. confirmar a senha atual.
+
+A exclusão é permanente. O servidor remove perfil, mensagens, amizades e
+associações de canais do JSON ou PostgreSQL, encerra todas as sessões da conta
+e informa os demais clientes em tempo real.
 
 ## 🔤 Acentos e símbolos
 
@@ -201,6 +226,7 @@ O servidor oferece:
 - `POST /auth/register`;
 - `POST /auth/login`;
 - `GET /bootstrap` com token Bearer;
+- `DELETE /account` com token Bearer, senha e confirmação;
 - `POST /channels` com token Bearer;
 - `GET /ws` para eventos autenticados em tempo real.
 

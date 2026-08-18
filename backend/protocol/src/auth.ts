@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   BootstrapSchema,
   DisplayNameSchema,
+  IdSchema,
   PasswordSchema,
   PublicUserSchema,
   UsernameSchema,
@@ -30,3 +31,15 @@ export const SessionReadySchema = z.object({
   bootstrap: BootstrapSchema,
 });
 export type SessionReady = z.infer<typeof SessionReadySchema>;
+
+export const DeleteAccountRequestSchema = z.object({
+  password: PasswordSchema,
+  confirmation: UsernameSchema,
+});
+export type DeleteAccountRequest = z.infer<typeof DeleteAccountRequestSchema>;
+
+export const DeleteAccountResponseSchema = z.object({
+  deleted: z.literal(true),
+  userId: IdSchema,
+});
+export type DeleteAccountResponse = z.infer<typeof DeleteAccountResponseSchema>;

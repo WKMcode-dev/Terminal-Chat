@@ -1,6 +1,6 @@
 {
   "name": "@terminal-chat/protocol",
-  "version": "2.2.1",
+  "version": "2.3.0",
   "description": "Contratos compartilhados e validados do Terminal Chat",
   "main": "dist/index.js",
   "scripts": {

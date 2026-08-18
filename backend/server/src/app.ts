@@ -5,6 +5,7 @@ import Fastify, { type FastifyInstance, type FastifyRequest } from "fastify";
 import { z } from "zod";
 
 import {
+  DeleteAccountRequestSchema,
   LoginRequestSchema,
   RegisterRequestSchema,
   UsernameSchema,
@@ -80,7 +81,7 @@ export async function buildServer(
 
   server.get("/health", async () => ({
     status: "ok",
-    version: "2.2.1",
+    version: "2.3.0",
     protocol: 2,
     storage: repository.kind,
   }));
@@ -112,6 +113,22 @@ export async function buildServer(
       user.id,
       new Set([...hub.onlineUserIds(), user.id]),
     );
+  });
+
+  server.delete("/account", async (request) => {
+    const user = await authenticatedUser(request, auth);
+    const input = DeleteAccountRequestSchema.parse(request.body);
+    await auth.deleteAccount(user.id, input);
+    hub.sendUsers([user.id], {
+      type: "account.deleted",
+      payload: { deleted: true, userId: user.id },
+    });
+    hub.broadcast({
+      type: "profile.removed",
+      payload: { userId: user.id },
+    });
+    hub.closeUser(user.id, 1000, "account-deleted");
+    return { deleted: true, userId: user.id };
   });
 
   server.post("/channels", async (request, reply) => {

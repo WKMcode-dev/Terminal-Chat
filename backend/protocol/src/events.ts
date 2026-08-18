@@ -1,6 +1,8 @@
 import { z } from "zod";
 
 import {
+  DeleteAccountRequestSchema,
+  DeleteAccountResponseSchema,
   LoginRequestSchema,
   RegisterRequestSchema,
   SessionReadySchema,
@@ -63,6 +65,7 @@ export const ClientEventSchema = z.discriminatedUnion("type", [
   ),
   envelope("friend.remove", z.object({ userId: IdSchema })),
   envelope("friend.block", z.object({ userId: IdSchema })),
+  envelope("account.delete", DeleteAccountRequestSchema),
   envelope(
     "typing.update",
     z.object({
@@ -92,6 +95,8 @@ export const ServerEventSchema = z.discriminatedUnion("type", [
   envelope("channel.created", ChannelSchema),
   envelope("presence.changed", PublicUserSchema),
   envelope("profile.updated", PublicUserSchema),
+  envelope("profile.removed", z.object({ userId: IdSchema })),
+  envelope("account.deleted", DeleteAccountResponseSchema),
   envelope("friendship.changed", FriendshipSchema),
   envelope(
     "friendship.removed",
