@@ -1,4 +1,4 @@
-# 💬 Terminal Chat v2.2
+# 💬 Terminal Chat v2.2.1
 
 Chat em tempo real com dois clientes: uma interface completa no terminal e um
 aplicativo desktop em Tauri. Ambos usam o mesmo servidor, as mesmas contas, os
@@ -175,7 +175,7 @@ os mesmos eventos de sala.
 
 ## ☁️ Servidor online gratuito
 
-O guia [DEPLOY.md](DEPLOY.md) ensina a usar Neon PostgreSQL com Koyeb ou Render.
+O guia [DEPLOY.md](DEPLOY.md) ensina a usar Neon PostgreSQL com Render Free.
 O servidor inclui Dockerfile, health check, heartbeat WebSocket, espera de cold
 start e reconexão automática. Depois do deploy, o endereço HTTPS pode ser
 informado na própria tela de login do desktop; a CLI usa

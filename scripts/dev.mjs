@@ -1,6 +1,6 @@
 import "dotenv/config";
 
-import { closeSync, mkdirSync, openSync } from "node:fs";
+import { closeSync, mkdirSync, openSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawn } from "node:child_process";
@@ -10,9 +10,14 @@ const logsDirectory = join(projectRoot, ".dev-logs");
 const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm";
 const npmExecutable = process.env.npm_execpath;
 
+const configuredRealtimeUrl = process.env.TERMINAL_CHAT_SERVER ?? "";
+const usesRemoteServer =
+  /^wss?:\/\//i.test(configuredRealtimeUrl) &&
+  !/(127\.0\.0\.1|localhost)/i.test(configuredRealtimeUrl);
+
 const services = [
   { name: "protocol", script: "dev:protocol" },
-  { name: "server", script: "dev:server" },
+  ...(!usesRemoteServer ? [{ name: "server", script: "dev:server" }] : []),
   { name: "desktop", script: "dev:desktop" },
 ];
 
@@ -39,15 +44,22 @@ for (const service of services) {
   logDescriptors.push(logDescriptor);
 }
 
-try {
-  await waitForServer("http://127.0.0.1:3000/health", 15_000);
-} catch (error) {
-  console.error(`O servidor não ficou pronto: ${error.message}`);
-  await shutdown(1);
-  process.exit(1);
+if (!usesRemoteServer) {
+  try {
+    await waitForServer("http://127.0.0.1:3000/health", 60_000);
+  } catch (error) {
+    console.error(`O servidor não ficou pronto: ${error.message}`);
+    printServiceLog("server");
+    await shutdown(1);
+    process.exit(1);
+  }
 }
 
-console.log("Iniciando protocolo, servidor e painel desktop...");
+console.log(
+  usesRemoteServer
+    ? `Iniciando clientes no servidor remoto ${configuredRealtimeUrl}...`
+    : "Iniciando protocolo, servidor e painel desktop...",
+);
 console.log("A interface do Terminal Chat abrirá neste terminal.\n");
 
 cliProcess = spawnNpmScript("dev:cli", {
@@ -112,6 +124,15 @@ function closeLogDescriptors() {
     } catch {
       // O descritor já pode ter sido encerrado durante a finalização do Node.
     }
+  }
+}
+
+function printServiceLog(name) {
+  try {
+    const contents = readFileSync(join(logsDirectory, `${name}.log`), "utf8");
+    if (contents.trim()) console.error(`\n${contents.trim()}\n`);
+  } catch {
+    // O arquivo pode não ter sido criado quando a inicialização falha cedo.
   }
 }
 

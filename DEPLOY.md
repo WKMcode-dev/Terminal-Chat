@@ -1,16 +1,19 @@
 # Hospedagem gratuita do Terminal Chat
 
 O projeto está pronto para usar um PostgreSQL externo e executar o servidor em
-um contêiner. A combinação mais simples sem mensalidade é:
+um contêiner. Para contas novas, a combinação gratuita recomendada é:
 
-- **Neon Free** para o PostgreSQL;
-- **Koyeb Free** para o servidor quando houver cartão disponível para a
-  verificação da conta; ou
-- **Render Free** como alternativa sem cartão, aceitando um despertar mais
+- **Neon Free** para o PostgreSQL; e
+- **Render Free** para o servidor, sem cartão, aceitando um despertar mais
   demorado depois de períodos sem ninguém conectado.
 
-O arquivo `Dockerfile` funciona nas duas hospedagens e o `render.yaml` permite
-criar o serviço do Render como Blueprint.
+Em fevereiro de 2026, a Koyeb anunciou que novas contas passariam a aceitar
+somente planos pagos enquanto a plataforma é incorporada à Mistral AI. Por isso,
+ela não é mais indicada neste guia como hospedagem gratuita. O comunicado está
+em <https://www.koyeb.com/blog/koyeb-is-joining-mistral-ai-to-build-the-future-of-ai-infrastructure>.
+
+O arquivo `Dockerfile` funciona em hospedagens de contêiner e o `render.yaml`
+permite criar o serviço do Render como Blueprint.
 
 ## 1. Criar o PostgreSQL no Neon
 
@@ -27,31 +30,7 @@ criar o serviço do Render como Blueprint.
 
 As tabelas são criadas automaticamente na primeira inicialização do servidor.
 
-## 2A. Hospedar no Koyeb
-
-1. Acesse <https://app.koyeb.com/> e conecte sua conta do GitHub.
-2. Escolha **Create Web Service → GitHub** e selecione
-   `WKMcode-dev/Terminal-Chat`.
-3. Selecione **Dockerfile** como método de construção e mantenha o caminho
-   `Dockerfile`.
-4. Escolha a instância chamada **Free**, na região Washington, D.C.
-5. Exponha a porta HTTP `3000` e configure o health check HTTP `/health`.
-6. Adicione as variáveis:
-
-   ```env
-   NODE_ENV=production
-   JWT_SECRET=gere-uma-chave-longa-e-aleatoria
-   DATABASE_URL=cole-a-url-pooled-do-neon
-   CORS_ORIGINS=http://tauri.localhost,https://tauri.localhost,tauri://localhost
-   ```
-
-7. Faça o deploy e copie o domínio HTTPS fornecido pelo Koyeb.
-
-A instância gratuita dorme após uma hora totalmente sem tráfego, mas desperta
-em poucos segundos. Enquanto algum cliente estiver conectado, o heartbeat do
-Terminal Chat mantém o WebSocket saudável.
-
-## 2B. Hospedar no Render sem cartão
+## 2. Hospedar no Render sem cartão
 
 1. Acesse <https://dashboard.render.com/> e conecte o GitHub.
 2. Escolha **New → Blueprint** e selecione o repositório do Terminal Chat.
@@ -96,9 +75,9 @@ npm run bundle:desktop
 ## Limite importante das chamadas
 
 A voz atual usa áudio PCM transmitido pelo servidor. Ela funciona, mas consome
-mais banda que Discord ou WebRTC. Para conversas longas e frequentes, prefira o
-Koyeb por sua franquia maior ou use uma VM Always Free. A migração futura da voz
-para Opus/WebRTC reduzirá bastante esse consumo.
+mais banda que Discord ou WebRTC. Para conversas longas e frequentes, monitore a
+franquia de saída do Render ou use uma VM com maior transferência. A migração
+futura da voz para Opus/WebRTC reduzirá bastante esse consumo.
 
 ## Diagnóstico
 

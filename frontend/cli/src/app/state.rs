@@ -107,7 +107,7 @@ impl Default for App {
 impl App {
     pub fn from_session(session: SessionReady, realtime: RealtimeClient) -> Self {
         let (settings, notice) = match settings::load() {
-            Ok(settings) => (settings, Some("Conectado ao Terminal Chat v2.2".to_owned())),
+            Ok(settings) => (settings, Some("Conectado ao Terminal Chat v2.2.1".to_owned())),
             Err(_) => (
                 UserSettings::default(),
                 Some("Configuração inválida; usando os valores padrão".to_owned()),

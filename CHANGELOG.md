@@ -1,5 +1,15 @@
 # Histórico de versões
 
+## 2.2.1
+
+- instala explicitamente o provedor criptográfico `ring` antes de conexões TLS,
+  eliminando o panic do `rustls` ao usar servidores `wss://`;
+- faz o cliente CLI carregar `TERMINAL_CHAT_SERVER` diretamente do `.env`;
+- permite que `npm run dev` use o servidor remoto sem aguardar um backend local;
+- amplia o diagnóstico e o tempo de inicialização do servidor local no Windows;
+- atualiza a recomendação de hospedagem após o encerramento do plano gratuito da
+  Koyeb para novas contas.
+
 ## 2.2.0
 
 - elimina a tela preta silenciosa do Tauri com recuperação de interface e erro
