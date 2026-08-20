@@ -18,6 +18,8 @@
   eventos recebidos por cada conexão WebSocket, inclusive autenticação e ping;
 - migra automaticamente usuários antigos para os canais existentes tanto no
   arquivo JSON quanto no PostgreSQL, sem apagar mensagens ou perfis;
+- compila o pacote compartilhado de protocolo antes da suíte de testes,
+  permitindo que o workflow funcione também em um checkout limpo do GitHub;
 - gera hashes SHA-256 e documenta o limite de distribuição sem assinatura de
   código perante SmartScreen e Controle Inteligente de Aplicativos.
 

@@ -4,6 +4,7 @@
   "description": "Chat multiplataforma em tempo real para terminal e desktop",
   "main": "index.js",
   "scripts": {
+    "pretest": "npm run build:protocol",
     "test": "run-s test:protocol test:server test:cli",
     "audit:production": "npm audit --omit=dev --audit-level=moderate",
     "predev": "npm run build --workspace=@terminal-chat/protocol",

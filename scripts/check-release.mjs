@@ -144,6 +144,11 @@ for (const script of [
   );
 }
 
+requireCondition(
+  rootPackage.scripts?.pretest === "npm run build:protocol",
+  "npm test precisa compilar o protocolo antes dos testes em ambientes limpos",
+);
+
 const lockedWorkspaces = [
   "backend/protocol",
   "backend/server",
