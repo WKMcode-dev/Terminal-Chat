@@ -9,8 +9,19 @@ const projectRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 const logsDirectory = join(projectRoot, ".dev-logs");
 const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm";
 const npmExecutable = process.env.npm_execpath;
+const defaultServerHttpUrl = "https://terminal-chat-6pet.onrender.com";
+const defaultServerRealtimeUrl = "wss://terminal-chat-6pet.onrender.com/ws";
+const localMode = process.argv.includes("--local");
 
-const configuredRealtimeUrl = process.env.TERMINAL_CHAT_SERVER ?? "";
+if (localMode) {
+  process.env.VITE_API_URL = "http://127.0.0.1:3000";
+  process.env.TERMINAL_CHAT_SERVER = "ws://127.0.0.1:3000/ws";
+} else {
+  process.env.VITE_API_URL ||= defaultServerHttpUrl;
+  process.env.TERMINAL_CHAT_SERVER ||= defaultServerRealtimeUrl;
+}
+
+const configuredRealtimeUrl = process.env.TERMINAL_CHAT_SERVER;
 const usesRemoteServer =
   /^wss?:\/\//i.test(configuredRealtimeUrl) &&
   !/(127\.0\.0\.1|localhost)/i.test(configuredRealtimeUrl);

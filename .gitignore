@@ -7,3 +7,4 @@ target
 !.env.example
 .dev-logs
 .terminal-chat
+artifacts

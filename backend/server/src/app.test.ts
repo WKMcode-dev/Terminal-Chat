@@ -15,6 +15,19 @@ afterEach(async () => {
 });
 
 describe("Terminal Chat server", () => {
+  it("reports readiness only after the active repository responds", async () => {
+    const { server } = await testServer();
+    const health = await server.inject({ method: "GET", url: "/health" });
+
+    expect(health.statusCode).toBe(200);
+    expect(health.json()).toMatchObject({
+      status: "ok",
+      version: "2.3.2",
+      protocol: 2,
+      storage: "json",
+    });
+  });
+
   it("registers, logs in and returns a real persisted bootstrap", async () => {
     const { server, dataFile } = await testServer();
     const register = await server.inject({
@@ -182,6 +195,34 @@ describe("Terminal Chat server", () => {
     if (created.type === "message.created") {
       expect(created.payload.body).toContain("acentuação");
     }
+    socket.close();
+  });
+
+  it("processes WebSocket events in arrival order during authentication", async () => {
+    const { server } = await testServer();
+    const accessToken = await registerUser(server, {
+      username: "ordered-events",
+      displayName: "Ordered Events",
+    });
+    const socket = (await server.injectWS("/ws")) as unknown as TestSocket;
+    const ready = nextSocketEventOfType(socket, "session.ready");
+    const pong = nextSocketEventOfType(socket, "pong");
+
+    socket.send(
+      JSON.stringify({
+        type: "auth.resume",
+        payload: { accessToken },
+      }),
+    );
+    socket.send(
+      JSON.stringify({
+        type: "ping",
+        payload: { sentAt: "2026-08-18T12:00:01.000Z" },
+      }),
+    );
+
+    expect((await ready).type).toBe("session.ready");
+    expect((await pong).payload.sentAt).toBe("2026-08-18T12:00:01.000Z");
     socket.close();
   });
 

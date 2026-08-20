@@ -34,6 +34,8 @@ RUN npm ci --omit=dev --workspace=@terminal-chat/protocol --workspace=@terminal-
 COPY --from=build /app/backend/protocol/dist backend/protocol/dist
 COPY --from=build /app/backend/server/dist backend/server/dist
 
+RUN mkdir -p /app/.terminal-chat && chown -R node:node /app/.terminal-chat
+
 USER node
 
 EXPOSE 3000

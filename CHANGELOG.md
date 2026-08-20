@@ -1,5 +1,36 @@
 # Histórico de versões
 
+## 2.3.2
+
+- adiciona um pipeline Windows reproduzível para gerar instalador NSIS e CLI
+  portátil sem exigir Node.js ou Rust dos amigos;
+- adiciona GitHub Actions para validar, compilar, armazenar artifacts e criar uma
+  Release ao publicar uma tag de versão;
+- fixa e revisa os únicos scripts de instalação npm necessários, impedindo que
+  `argon2` ou `esbuild` sejam silenciosamente bloqueados em uma instalação limpa;
+- adiciona verificação combinatória de versões, URLs oficiais, empacotamento,
+  WebView2, ícones, segredos ignorados e dependências com install scripts;
+- configura o instalador desktop somente como NSIS por usuário, em português e
+  inglês, sem exigir privilégios administrativos;
+- remove dependências de servidor que não eram utilizadas e reduz a superfície
+  de instalação e auditoria do pacote de produção;
+- faz o endpoint `/health` consultar também o PostgreSQL/Neon e serializa os
+  eventos recebidos por cada conexão WebSocket, inclusive autenticação e ping;
+- migra automaticamente usuários antigos para os canais existentes tanto no
+  arquivo JSON quanto no PostgreSQL, sem apagar mensagens ou perfis;
+- gera hashes SHA-256 e documenta o limite de distribuição sem assinatura de
+  código perante SmartScreen e Controle Inteligente de Aplicativos.
+
+## 2.3.1
+
+- configura o servidor oficial Render + Neon como padrão interno da CLI e do
+  desktop;
+- permite que amigos entrem com `npm run dev` sem criar ou editar `.env`;
+- adiciona `npm run dev:local` para iniciar deliberadamente um backend isolado;
+- mantém a seleção manual e as variáveis de ambiente como sobrescritas para
+  comunidades próprias;
+- documenta claramente que contas locais e online pertencem a bancos distintos.
+
 ## 2.3.0
 
 - adiciona busca instantânea de usuários por nome ou `@usuário` na CLI com

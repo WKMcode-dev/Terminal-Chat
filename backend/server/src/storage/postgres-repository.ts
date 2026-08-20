@@ -87,12 +87,23 @@ export class PostgresRepository implements Repository {
       await this.sql`
         insert into channels (id, name, description)
         values (${randomUUID()}, 'geral', 'Canal principal da comunidade')
+        on conflict (name) do nothing
       `;
     }
+    await this.sql`
+      insert into channel_members (channel_id, user_id, role)
+      select channels.id, users.id, 'member'
+      from channels cross join users
+      on conflict do nothing
+    `;
   }
 
   async close(): Promise<void> {
     await this.sql.end({ timeout: 5 });
+  }
+
+  async healthCheck(): Promise<void> {
+    await this.sql`select 1`;
   }
 
   async createUser(input: CreateUserInput): Promise<StoredUser> {

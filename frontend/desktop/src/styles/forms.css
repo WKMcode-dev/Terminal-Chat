@@ -181,10 +181,37 @@ select:focus {
 .server-field {
   margin-top: 12px;
 }
+.server-field label {
+  display: grid;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+.server-field-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 7px;
+}
 .server-field small {
   color: var(--muted);
   font-size: 0.67rem;
   font-weight: 500;
+}
+.server-default-button {
+  flex: 0 0 auto;
+  padding: 0;
+  border: 0;
+  color: var(--primary);
+  background: transparent;
+  font-size: 0.67rem;
+  font-weight: 800;
+}
+.server-default-button:hover {
+  text-decoration: underline;
 }
 .form-error {
   margin: 4px 0 12px;

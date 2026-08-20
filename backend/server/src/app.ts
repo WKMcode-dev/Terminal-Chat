@@ -79,12 +79,15 @@ export async function buildServer(
   const hub = new RealtimeHub();
   const authLimiter = new RateLimiter(12, 60_000);
 
-  server.get("/health", async () => ({
-    status: "ok",
-    version: "2.3.0",
-    protocol: 2,
-    storage: repository.kind,
-  }));
+  server.get("/health", async () => {
+    await repository.healthCheck();
+    return {
+      status: "ok",
+      version: "2.3.2",
+      protocol: 2,
+      storage: repository.kind,
+    };
+  });
 
   server.post("/auth/register", async (request, reply) => {
     authLimiter.consume(request.ip);

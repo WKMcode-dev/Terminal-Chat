@@ -1,4 +1,4 @@
-import { mkdtemp } from "node:fs/promises";
+import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -7,6 +7,47 @@ import { describe, expect, it } from "vitest";
 import { JsonRepository } from "./json-repository.js";
 
 describe("JsonRepository social profiles", () => {
+  it("migrates legacy users into existing channels", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "terminal-chat-legacy-"));
+    const filePath = join(directory, "data.json");
+    const userId = "00000000-0000-4000-8000-000000000001";
+    const channelId = "00000000-0000-4000-8000-000000000002";
+    await writeFile(
+      filePath,
+      JSON.stringify({
+        users: [
+          {
+            id: userId,
+            username: "legacy",
+            displayName: "Legacy",
+            passwordHash: "hash",
+            presence: "offline",
+            activity: "",
+            createdAt: "2026-08-18T12:00:00.000Z",
+          },
+        ],
+        channels: [
+          {
+            id: channelId,
+            name: "geral",
+            description: "Canal legado",
+            createdAt: "2026-08-18T12:00:00.000Z",
+          },
+        ],
+        messages: [],
+      }),
+      "utf8",
+    );
+
+    const repository = new JsonRepository(filePath);
+    await repository.init();
+
+    expect(await repository.listChannelsForUser(userId)).toMatchObject([
+      { id: channelId, name: "geral" },
+    ]);
+    await repository.close();
+  });
+
   it("persists profile edits and the complete friendship lifecycle", async () => {
     const directory = await mkdtemp(join(tmpdir(), "terminal-chat-social-"));
     const repository = new JsonRepository(join(directory, "data.json"));

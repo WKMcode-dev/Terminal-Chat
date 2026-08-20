@@ -1,14 +1,16 @@
 const STORAGE_KEY = "terminal-chat-server-url";
-const LOCAL_SERVER = "http://127.0.0.1:3000";
+export const DEFAULT_SERVER = "https://terminal-chat-6pet.onrender.com";
 
 export function getServerHttpUrl(): string {
   const saved = localStorage.getItem(STORAGE_KEY);
-  const configured = saved || import.meta.env.VITE_API_URL || LOCAL_SERVER;
+  const configured = saved || import.meta.env.VITE_API_URL || DEFAULT_SERVER;
   try {
     return normalizeServerHttpUrl(configured);
   } catch {
     localStorage.removeItem(STORAGE_KEY);
-    return normalizeServerHttpUrl(import.meta.env.VITE_API_URL || LOCAL_SERVER);
+    return normalizeServerHttpUrl(
+      import.meta.env.VITE_API_URL || DEFAULT_SERVER,
+    );
   }
 }
 

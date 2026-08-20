@@ -1,4 +1,4 @@
-# 💬 Terminal Chat v2.3.0
+# 💬 Terminal Chat v2.3.2
 
 Chat em tempo real com dois clientes: uma interface completa no terminal e um
 aplicativo desktop em Tauri. Ambos usam o mesmo servidor, as mesmas contas, os
@@ -34,7 +34,19 @@ mesmos canais, o mesmo histórico e as mesmas salas de voz.
 - Dockerfile e configuração de deploy para hospedagem gratuita;
 - validação compartilhada de todos os eventos pelo protocolo v2.
 
-## 🚀 Executar no Windows
+## 📦 Instalar para usar
+
+Amigos e usuários finais não precisam receber o código-fonte nem instalar
+Node.js ou Rust. A página **Releases** do GitHub oferece dois arquivos:
+
+- instalador desktop `Terminal-Chat-Desktop-...-Setup.exe`;
+- CLI portátil `Terminal-Chat-CLI-...zip`.
+
+Os dois já apontam para o servidor oficial e funcionam sem `.env`. Consulte
+[DISTRIBUTION.md](DISTRIBUTION.md) para instalação, hashes, SmartScreen e o
+checklist de teste antes de publicar uma versão.
+
+## 🚀 Executar o código no Windows
 
 Requisitos:
 
@@ -50,18 +62,35 @@ npm install
 npm run dev
 ```
 
-O comando compila o protocolo, inicia servidor e desktop em segundo plano,
-espera a API ficar saudável e abre o cliente CLI no terminal atual. Na primeira
-execução, escolha **Criar conta**. A mesma conta pode ser usada no desktop.
+O comando já conecta a CLI e o desktop ao servidor oficial da comunidade:
+
+```text
+https://terminal-chat-6pet.onrender.com
+```
+
+Não é necessário criar `.env`, informar endereços ou iniciar um banco. Na
+primeira execução, escolha **Criar conta**. A mesma conta pode ser usada em
+qualquer computador e também no aplicativo desktop.
+
+Para desenvolver o backend em um ambiente local e isolado, use:
+
+```powershell
+npm run dev:local
+```
+
+Contas criadas no modo local ficam somente naquele computador e não aparecem no
+servidor oficial. Variáveis em `.env` continuam disponíveis apenas como
+sobrescritas avançadas para outro servidor.
 
 Os logs dos processos auxiliares ficam em `.dev-logs`. O terminal original é
 restaurado mesmo quando a interface encontra um erro.
 
 ## 💾 Banco de dados
 
-### Início imediato
+### Desenvolvimento local
 
-Sem configuração adicional, o servidor usa um repositório JSON transacional em:
+Ao executar `npm run dev:local`, o backend usa, sem configuração adicional, um
+repositório JSON transacional em:
 
 ```text
 .terminal-chat/data.json
@@ -84,7 +113,7 @@ O PostgreSQL incluído pode ser iniciado com:
 
 ```powershell
 docker compose up -d postgres
-npm run dev
+npm run dev:local
 ```
 
 As tabelas, índices, associação ao canal inicial e restrições de unicidade são
@@ -195,16 +224,18 @@ servidor. Salas de canal exigem associação ao canal; salas diretas aceitam
 somente os dois usuários que formam o identificador da sala.
 
 Para produção pública ou grupos muito grandes, a evolução recomendada é trocar o
-transporte PCM pelo LiveKit já previsto nas dependências do servidor, mantendo
-os mesmos eventos de sala.
+transporte PCM por Opus/WebRTC ou LiveKit, mantendo os mesmos eventos de sala. A
+dependência será adicionada quando essa migração for implementada, para não
+inflar nem ampliar a superfície do servidor atual sem necessidade.
 
 ## ☁️ Servidor online gratuito
 
-O guia [DEPLOY.md](DEPLOY.md) ensina a usar Neon PostgreSQL com Render Free.
-O servidor inclui Dockerfile, health check, heartbeat WebSocket, espera de cold
-start e reconexão automática. Depois do deploy, o endereço HTTPS pode ser
-informado na própria tela de login do desktop; a CLI usa
-`TERMINAL_CHAT_SERVER=wss://seu-dominio/ws`.
+O servidor oficial já vem configurado na CLI e no desktop e usa Neon PostgreSQL
+com Render Free. O servidor inclui Dockerfile, health check, heartbeat
+WebSocket, espera de cold start e reconexão automática. O guia
+[DEPLOY.md](DEPLOY.md) ensina a publicar outra comunidade; nesse caso, o endereço
+pode ser informado na tela de login do desktop ou sobrescrito pelas variáveis
+`VITE_API_URL` e `TERMINAL_CHAT_SERVER`.
 
 As opções gratuitas podem dormir quando ninguém estiver conectado. Elas voltam
 automaticamente na próxima conexão, portanto ficam acessíveis a qualquer hora,
@@ -260,5 +291,10 @@ testes para entrada Unicode, navegação, atalhos, responsividade e reamostragem
 Para gerar o instalador desktop:
 
 ```powershell
-npm run bundle:desktop
+npm run release:windows
 ```
+
+O comando executa a validação completa e grava o instalador NSIS, a CLI portátil
+e os hashes SHA-256 em `artifacts\windows\vX.Y.Z`. O workflow **Windows
+Release** executa o mesmo processo no GitHub Actions e publica os arquivos ao
+receber uma tag `vX.Y.Z`.

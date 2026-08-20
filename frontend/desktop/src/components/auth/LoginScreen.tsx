@@ -9,6 +9,7 @@ import {
 
 import { api } from "../../services/api";
 import {
+  DEFAULT_SERVER,
   getServerHttpUrl,
   setServerHttpUrl,
 } from "../../services/serverConfig";
@@ -26,6 +27,11 @@ export function LoginScreen({ onAuthenticated }: LoginScreenProps) {
   const [loading, setLoading] = useState(false);
   const [showServer, setShowServer] = useState(false);
   const [serverUrl, setServerUrl] = useState(getServerHttpUrl);
+
+  function restoreOfficialServer() {
+    setServerUrl(setServerHttpUrl(DEFAULT_SERVER));
+    setError(undefined);
+  }
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -55,7 +61,7 @@ export function LoginScreen({ onAuthenticated }: LoginScreenProps) {
         <div className="brand-mark">
           <Radio size={26} />
         </div>
-        <p className="eyebrow">Terminal Chat v2.3.0</p>
+        <p className="eyebrow">Terminal Chat v2.3.2</p>
         <h1 id="auth-title">
           {registering ? "Crie sua conta" : "Bem-vindo de volta"}
         </h1>
@@ -136,18 +142,29 @@ export function LoginScreen({ onAuthenticated }: LoginScreenProps) {
           <ChevronDown size={15} />
         </button>
         {showServer && (
-          <label className="server-field">
-            Endereço da comunidade
-            <input
-              autoCapitalize="none"
-              autoComplete="url"
-              onChange={(event) => setServerUrl(event.target.value)}
-              placeholder="https://terminal-chat.koyeb.app"
-              spellCheck={false}
-              value={serverUrl}
-            />
-            <small>Use HTTP somente para o servidor local.</small>
-          </label>
+          <div className="server-field">
+            <label>
+              Endereço da comunidade
+              <input
+                autoCapitalize="none"
+                autoComplete="url"
+                onChange={(event) => setServerUrl(event.target.value)}
+                placeholder="https://terminal-chat-6pet.onrender.com"
+                spellCheck={false}
+                value={serverUrl}
+              />
+            </label>
+            <div className="server-field-footer">
+              <small>Altere somente para usar outra comunidade.</small>
+              <button
+                className="server-default-button"
+                onClick={restoreOfficialServer}
+                type="button"
+              >
+                Usar servidor oficial
+              </button>
+            </div>
+          </div>
         )}
       </section>
     </main>

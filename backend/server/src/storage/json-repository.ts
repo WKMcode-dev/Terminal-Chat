@@ -59,6 +59,10 @@ export class JsonRepository implements Repository {
     await this.writeQueue;
   }
 
+  async healthCheck(): Promise<void> {
+    await this.writeQueue;
+  }
+
   async createUser(input: CreateUserInput): Promise<StoredUser> {
     if (this.state.users.some((user) => user.username === input.username)) {
       throw new Error("USERNAME_TAKEN");
@@ -338,15 +342,33 @@ export class JsonRepository implements Repository {
   }
 
   private async ensureGeneralChannel(): Promise<void> {
-    if (this.state.channels.length > 0) return;
-    const channel: StoredChannel = {
-      id: randomUUID(),
-      name: "geral",
-      description: "Canal principal da comunidade",
-      createdAt: new Date().toISOString(),
-    };
-    this.state.channels.push(channel);
-    await this.persist();
+    let changed = false;
+    if (this.state.channels.length === 0) {
+      this.state.channels.push({
+        id: randomUUID(),
+        name: "geral",
+        description: "Canal principal da comunidade",
+        createdAt: new Date().toISOString(),
+      });
+      changed = true;
+    }
+    for (const channel of this.state.channels) {
+      for (const user of this.state.users) {
+        const alreadyMember = this.state.channelMembers.some(
+          (member) =>
+            member.channelId === channel.id && member.userId === user.id,
+        );
+        if (!alreadyMember) {
+          this.state.channelMembers.push({
+            channelId: channel.id,
+            userId: user.id,
+            role: "member",
+          });
+          changed = true;
+        }
+      }
+    }
+    if (changed) await this.persist();
   }
 
   private async persist(): Promise<void> {

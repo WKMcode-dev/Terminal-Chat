@@ -59,6 +59,7 @@ export interface CreateChannelInput {
 export interface Repository {
   readonly kind: "json" | "postgres";
   init(): Promise<void>;
+  healthCheck(): Promise<void>;
   close(): Promise<void>;
   createUser(input: CreateUserInput): Promise<StoredUser>;
   findUserByUsername(username: string): Promise<StoredUser | undefined>;

@@ -16,6 +16,7 @@ use crate::{
 
 const KEYRING_SERVICE: &str = "terminal-chat";
 const KEYRING_ACCOUNT: &str = "session";
+const DEFAULT_SERVER_URL: &str = "wss://terminal-chat-6pet.onrender.com/ws";
 
 pub fn connect_interactively() -> Result<(SessionReady, RealtimeClient)> {
     let server_url = configured_server_url();
@@ -30,7 +31,7 @@ pub fn connect_interactively() -> Result<(SessionReady, RealtimeClient)> {
         }
     }
 
-    println!("\nTerminal Chat v2.3.0 — conexão segura");
+    println!("\nTerminal Chat v2.3.2 — conexão segura");
     println!("Servidor: {server_url}\n");
     for _ in 0..3 {
         let mode = read_line("[1] Entrar  [2] Criar conta: ")?;
@@ -68,7 +69,7 @@ fn configured_server_url() -> String {
         .ok()
         .filter(|value| !value.trim().is_empty())
         .or_else(|| dotenv_value("TERMINAL_CHAT_SERVER"))
-        .unwrap_or_else(|| "ws://127.0.0.1:3000/ws".to_owned())
+        .unwrap_or_else(|| DEFAULT_SERVER_URL.to_owned())
 }
 
 fn dotenv_value(key: &str) -> Option<String> {

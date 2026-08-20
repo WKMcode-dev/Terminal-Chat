@@ -46,6 +46,13 @@ o heartbeat envia tráfego WebSocket periódico.
 
 ## 3. Conectar os clientes
 
+O código distribuído pelo projeto já utiliza o servidor oficial
+`https://terminal-chat-6pet.onrender.com` quando nenhuma configuração é
+fornecida. Portanto, usuários comuns não precisam criar um arquivo `.env`.
+
+As instruções abaixo são necessárias somente para quem publicar outra instância
+do Terminal Chat.
+
 No aplicativo desktop, abra **Servidor** na tela de login e informe:
 
 ```text

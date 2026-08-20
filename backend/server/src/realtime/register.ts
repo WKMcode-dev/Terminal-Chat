@@ -39,11 +39,12 @@ export function registerRealtime(
     const socket = nativeSocket as RawSocket;
     let currentUser: StoredUser | undefined;
     let closed = false;
+    let messageQueue = Promise.resolve();
 
     socket.on("message", (raw) => {
-      void handleRawEvent(raw.toString()).catch((error) =>
-        sendError(socket, error, request.id),
-      );
+      messageQueue = messageQueue
+        .then(() => handleRawEvent(raw.toString()))
+        .catch((error) => sendError(socket, error, request.id));
     });
     socket.on("close", () => void disconnect());
     socket.on("error", () => void disconnect());

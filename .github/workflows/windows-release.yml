@@ -1,0 +1,73 @@
+name: Windows Release
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    name: Build Windows x64
+    runs-on: windows-latest
+
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v7
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Configurar Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Restaurar cache do Rust
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            frontend/cli -> target
+            frontend/desktop/src-tauri -> target
+
+      - name: Instalar dependências fixadas
+        run: npm ci
+
+      - name: Validar a configuração da versão
+        run: npm run release:check
+
+      - name: Auditar dependências de produção
+        run: npm run audit:production
+
+      - name: Executar testes
+        run: npm test
+
+      - name: Executar typecheck
+        run: npm run typecheck
+
+      - name: Gerar instalador desktop e CLI portátil
+        run: npm run release:windows -- -SkipInstall -SkipChecks
+
+      - name: Publicar artifacts do workflow
+        uses: actions/upload-artifact@v7
+        with:
+          name: Terminal-Chat-Windows-${{ github.ref_name }}
+          path: artifacts/windows/v*/**
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Criar GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $files = Get-ChildItem "artifacts/windows/v*" -File | ForEach-Object FullName
+          gh release create $env:GITHUB_REF_NAME $files `
+            --verify-tag `
+            --title "Terminal Chat $env:GITHUB_REF_NAME" `
+            --generate-notes
