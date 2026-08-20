@@ -11,6 +11,7 @@ import {
   ApiErrorSchema,
   ChannelSchema,
   ChatMessageSchema,
+  ConversationSchema,
   IdSchema,
   MessageBodySchema,
   MessageScopeSchema,
@@ -21,6 +22,7 @@ import {
   ProfileBioSchema,
   PublicUserSchema,
   TimestampSchema,
+  VoiceCodecSchema,
 } from "./common.js";
 
 const envelope = <T extends string, S extends z.ZodType>(type: T, payload: S) =>
@@ -39,6 +41,11 @@ export const ClientEventSchema = z.discriminatedUnion("type", [
       body: MessageBodySchema,
     }),
   ),
+  envelope(
+    "message.edit",
+    z.object({ messageId: IdSchema, body: MessageBodySchema }),
+  ),
+  envelope("message.delete", z.object({ messageId: IdSchema })),
   envelope(
     "presence.update",
     z.object({
@@ -65,6 +72,8 @@ export const ClientEventSchema = z.discriminatedUnion("type", [
   ),
   envelope("friend.remove", z.object({ userId: IdSchema })),
   envelope("friend.block", z.object({ userId: IdSchema })),
+  envelope("conversation.open", z.object({ userId: IdSchema })),
+  envelope("conversation.close", z.object({ userId: IdSchema })),
   envelope("account.delete", DeleteAccountRequestSchema),
   envelope(
     "typing.update",
@@ -74,13 +83,20 @@ export const ClientEventSchema = z.discriminatedUnion("type", [
       typing: z.boolean(),
     }),
   ),
-  envelope("voice.join", z.object({ roomId: z.string().min(1).max(96) })),
+  envelope(
+    "voice.join",
+    z.object({
+      roomId: z.string().min(1).max(96),
+      codec: VoiceCodecSchema.optional(),
+    }),
+  ),
   envelope("voice.leave", z.object({ roomId: z.string().min(1).max(96) })),
   envelope(
     "voice.audio",
     z.object({
       roomId: z.string().min(1).max(96),
       sampleRate: z.number().int().min(8_000).max(192_000),
+      codec: VoiceCodecSchema.optional(),
       samples: z.string().min(1).max(350_000),
     }),
   ),
@@ -92,6 +108,16 @@ export const ServerEventSchema = z.discriminatedUnion("type", [
   envelope("session.ready", SessionReadySchema),
   envelope("error", ApiErrorSchema),
   envelope("message.created", ChatMessageSchema),
+  envelope("message.updated", ChatMessageSchema),
+  envelope(
+    "message.deleted",
+    z.object({
+      messageId: IdSchema,
+      authorId: IdSchema,
+      scope: MessageScopeSchema,
+      targetId: IdSchema,
+    }),
+  ),
   envelope("channel.created", ChannelSchema),
   envelope("presence.changed", PublicUserSchema),
   envelope("profile.updated", PublicUserSchema),
@@ -101,6 +127,11 @@ export const ServerEventSchema = z.discriminatedUnion("type", [
   envelope(
     "friendship.removed",
     z.object({ userId: IdSchema, otherUserId: IdSchema }),
+  ),
+  envelope("conversation.opened", ConversationSchema),
+  envelope(
+    "conversation.closed",
+    z.object({ userId: IdSchema, contactId: IdSchema }),
   ),
   envelope(
     "typing.changed",
@@ -121,6 +152,7 @@ export const ServerEventSchema = z.discriminatedUnion("type", [
       roomId: z.string(),
       userId: IdSchema,
       sampleRate: z.number().int(),
+      codec: VoiceCodecSchema.optional(),
       samples: z.string(),
     }),
   ),

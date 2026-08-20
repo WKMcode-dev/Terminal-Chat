@@ -1,6 +1,7 @@
 import type {
   Bootstrap,
   ChatMessage,
+  Conversation,
   PublicUser,
 } from "@terminal-chat/protocol";
 
@@ -12,12 +13,14 @@ export async function buildBootstrap(
   userId: string,
   onlineUserIds: ReadonlySet<string>,
 ): Promise<Bootstrap> {
-  const [self, users, storedChannels, friendships] = await Promise.all([
-    repository.findUserById(userId),
-    repository.listUsers(),
-    repository.listChannelsForUser(userId),
-    repository.listFriendshipsForUser(userId),
-  ]);
+  const [self, users, storedChannels, friendships, hiddenConversationIds] =
+    await Promise.all([
+      repository.findUserById(userId),
+      repository.listUsers(),
+      repository.listChannelsForUser(userId),
+      repository.listFriendshipsForUser(userId),
+      repository.listHiddenConversationIds(userId),
+    ]);
   if (!self) throw new Error("USER_NOT_FOUND");
 
   const usersById = new Map(users.map((user) => [user.id, user]));
@@ -37,7 +40,19 @@ export async function buildBootstrap(
   );
   const channelMessages = Object.fromEntries(channelEntries);
 
-  const contacts = users.filter((user) => user.id !== userId);
+  const acceptedContactIds = new Set(
+    friendships
+      .filter((friendship) => friendship.status === "accepted")
+      .map((friendship) =>
+        friendship.requesterId === userId
+          ? friendship.addresseeId
+          : friendship.requesterId,
+      ),
+  );
+  const hidden = new Set(hiddenConversationIds);
+  const contacts = users.filter(
+    (user) => acceptedContactIds.has(user.id) && !hidden.has(user.id),
+  );
   const conversations = await Promise.all(
     contacts.map(async (contact) => ({
       contact: publicById.get(contact.id)!,
@@ -61,6 +76,26 @@ export async function buildBootstrap(
     conversations,
     channelMessages,
     friendships,
+  };
+}
+
+export async function buildConversation(
+  repository: Repository,
+  userId: string,
+  contactId: string,
+  onlineUserIds: ReadonlySet<string>,
+): Promise<Conversation> {
+  const [contact, users, messages] = await Promise.all([
+    repository.findUserById(contactId),
+    repository.listUsers(),
+    repository.listDirectMessages(userId, contactId, 100),
+  ]);
+  if (!contact) throw new Error("USER_NOT_FOUND");
+  const usersById = new Map(users.map((user) => [user.id, user]));
+  return {
+    contact: withConnectionPresence(contact, onlineUserIds),
+    unread: 0,
+    messages: mapMessages(messages, usersById),
   };
 }
 

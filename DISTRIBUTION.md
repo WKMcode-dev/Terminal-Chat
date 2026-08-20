@@ -84,11 +84,20 @@ git push origin vX.Y.Z
 
 O workflow cria a Release e anexa o instalador desktop e o ZIP portátil da CLI.
 
+Na atualização 2.4.0, publique primeiro o servidor e só depois distribua os
+novos clientes. O servidor v3 aceita clientes 2.3.2 durante a transição; os
+clientes novos também recuam para o codec antigo ao encontrar um servidor v2.
+As migrações do Neon são automáticas, não apagam histórico e não armazenam
+áudio.
+
 ## Antes de enviar aos amigos
 
 - instale em um usuário do Windows que nunca teve o projeto;
 - entre com uma conta existente do Neon;
-- crie uma segunda conta e teste amizade, mensagem e logout;
+- crie uma segunda conta e confirme que ela só aparece em conversas depois da
+  amizade ser aceita;
+- teste envio, edição, exclusão, fechamento e reabertura de conversa;
+- remova a amizade e confirme que a conversa desaparece para os dois lados;
 - teste microfone, retorno local e chamada entre dois computadores;
 - confirme que a tela de login mostra `terminal-chat-6pet.onrender.com`;
 - compare os hashes dos arquivos publicados.

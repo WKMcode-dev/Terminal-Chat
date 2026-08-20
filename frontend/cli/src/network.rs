@@ -9,7 +9,7 @@ use futures_util::{SinkExt, StreamExt};
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 use tokio_tungstenite::{connect_async, tungstenite::Message};
 
-use crate::protocol::{ClientEvent, ServerEvent, SessionReady, WireError};
+use crate::protocol::{ClientEvent, ServerEvent, SessionReady, VoiceCodec, WireError};
 
 pub struct RealtimeClient {
     commands: UnboundedSender<ClientEvent>,
@@ -107,7 +107,7 @@ async fn run_actor(
         }
     };
     let access_token = session.access_token.clone();
-    let mut joined_room: Option<String> = None;
+    let mut joined_room: Option<(String, VoiceCodec)> = None;
     if ready.send(Ok(session)).is_err() {
         return;
     }
@@ -128,8 +128,11 @@ async fn run_actor(
         match authenticate_with_retry(&server_url, resume, 140).await {
             Ok((new_socket, new_session)) => {
                 socket = new_socket;
-                if let Some(room_id) = joined_room.clone() {
-                    let event = ClientEvent::VoiceJoin { room_id };
+                if let Some((room_id, codec)) = joined_room.clone() {
+                    let event = ClientEvent::VoiceJoin {
+                        room_id,
+                        codec,
+                    };
                     if let Ok(payload) = serde_json::to_string(&event) {
                         let _ = socket.send(Message::Text(payload.into())).await;
                     }
@@ -193,7 +196,7 @@ async fn run_connected(
     >,
     commands: &mut UnboundedReceiver<ClientEvent>,
     events: &mpsc::Sender<ServerEvent>,
-    joined_room: &mut Option<String>,
+    joined_room: &mut Option<(String, VoiceCodec)>,
 ) -> bool {
     let mut heartbeat = tokio::time::interval(Duration::from_secs(20));
     loop {
@@ -201,9 +204,12 @@ async fn run_connected(
             command = commands.recv() => {
                 let Some(command) = command else { return true };
                 match &command {
-                    ClientEvent::VoiceJoin { room_id } => *joined_room = Some(room_id.clone()),
+                    ClientEvent::VoiceJoin { room_id, codec } => {
+                        *joined_room = Some((room_id.clone(), *codec))
+                    }
                     ClientEvent::VoiceLeave { room_id }
-                        if joined_room.as_deref() == Some(room_id.as_str()) =>
+                        if joined_room.as_ref().map(|(joined, _)| joined.as_str())
+                            == Some(room_id.as_str()) =>
                     {
                         *joined_room = None
                     }

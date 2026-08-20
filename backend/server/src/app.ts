@@ -7,6 +7,7 @@ import { z } from "zod";
 import {
   DeleteAccountRequestSchema,
   LoginRequestSchema,
+  PROTOCOL_VERSION,
   RegisterRequestSchema,
   UsernameSchema,
 } from "@terminal-chat/protocol";
@@ -83,8 +84,8 @@ export async function buildServer(
     await repository.healthCheck();
     return {
       status: "ok",
-      version: "2.3.2",
-      protocol: 2,
+      version: "2.4.0",
+      protocol: PROTOCOL_VERSION,
       storage: repository.kind,
     };
   });

@@ -15,9 +15,10 @@ export class RealtimeClient {
   private reconnectTimer?: number;
   private heartbeatTimer?: number;
   private reconnectAttempt = 0;
+  private protocolVersion = 2;
   private manuallyClosed = false;
   private readonly listeners = new Set<Listener>();
-  private readonly joinedRooms = new Set<string>();
+  private readonly joinedRooms = new Map<string, "f32" | "pcm16">();
 
   constructor(accessToken: string) {
     this.accessToken = accessToken;
@@ -42,12 +43,19 @@ export class RealtimeClient {
     return () => this.listeners.delete(listener);
   }
 
+  preferredVoiceCodec(): "f32" | "pcm16" {
+    return this.protocolVersion >= 3 ? "pcm16" : "f32";
+  }
+
   send(event: ClientEvent): boolean {
     const parsed = ClientEventSchema.safeParse(event);
     if (!parsed.success || this.socket?.readyState !== WebSocket.OPEN)
       return false;
     if (parsed.data.type === "voice.join")
-      this.joinedRooms.add(parsed.data.payload.roomId);
+      this.joinedRooms.set(
+        parsed.data.payload.roomId,
+        parsed.data.payload.codec ?? "f32",
+      );
     if (parsed.data.type === "voice.leave")
       this.joinedRooms.delete(parsed.data.payload.roomId);
     this.socket.send(JSON.stringify(parsed.data));
@@ -75,10 +83,11 @@ export class RealtimeClient {
       const decoded = ServerEventSchema.safeParse(safeJson(message.data));
       if (!decoded.success) return;
       if (decoded.data.type === "session.ready") {
+        this.protocolVersion = decoded.data.payload.protocolVersion;
         this.accessToken = decoded.data.payload.accessToken;
         sessionStorage.setItem("terminal-chat-token", this.accessToken);
-        for (const roomId of this.joinedRooms) {
-          this.send({ type: "voice.join", payload: { roomId } });
+        for (const [roomId, codec] of this.joinedRooms) {
+          this.send({ type: "voice.join", payload: { roomId, codec } });
         }
         this.startHeartbeat();
       }

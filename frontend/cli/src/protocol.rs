@@ -28,6 +28,17 @@ pub enum ClientEvent {
         target_id: String,
         body: String,
     },
+    #[serde(rename = "message.edit")]
+    MessageEdit {
+        #[serde(rename = "messageId")]
+        message_id: String,
+        body: String,
+    },
+    #[serde(rename = "message.delete")]
+    MessageDelete {
+        #[serde(rename = "messageId")]
+        message_id: String,
+    },
     #[serde(rename = "presence.update")]
     PresenceUpdate {
         presence: WirePresence,
@@ -62,6 +73,16 @@ pub enum ClientEvent {
         #[serde(rename = "userId")]
         user_id: String,
     },
+    #[serde(rename = "conversation.open")]
+    ConversationOpen {
+        #[serde(rename = "userId")]
+        user_id: String,
+    },
+    #[serde(rename = "conversation.close")]
+    ConversationClose {
+        #[serde(rename = "userId")]
+        user_id: String,
+    },
     #[serde(rename = "account.delete")]
     AccountDelete {
         password: String,
@@ -71,6 +92,7 @@ pub enum ClientEvent {
     VoiceJoin {
         #[serde(rename = "roomId")]
         room_id: String,
+        codec: VoiceCodec,
     },
     #[serde(rename = "voice.leave")]
     VoiceLeave {
@@ -83,6 +105,7 @@ pub enum ClientEvent {
         room_id: String,
         #[serde(rename = "sampleRate")]
         sample_rate: u32,
+        codec: VoiceCodec,
         samples: String,
     },
     #[serde(rename = "ping")]
@@ -101,6 +124,18 @@ pub enum ServerEvent {
     Error(WireError),
     #[serde(rename = "message.created")]
     MessageCreated(WireMessage),
+    #[serde(rename = "message.updated")]
+    MessageUpdated(WireMessage),
+    #[serde(rename = "message.deleted")]
+    MessageDeleted {
+        #[serde(rename = "messageId")]
+        message_id: String,
+        #[serde(rename = "authorId")]
+        author_id: String,
+        scope: MessageScope,
+        #[serde(rename = "targetId")]
+        target_id: String,
+    },
     #[serde(rename = "channel.created")]
     ChannelCreated(WireChannel),
     #[serde(rename = "presence.changed")]
@@ -127,6 +162,15 @@ pub enum ServerEvent {
         #[serde(rename = "otherUserId")]
         other_user_id: String,
     },
+    #[serde(rename = "conversation.opened")]
+    ConversationOpened(WireConversation),
+    #[serde(rename = "conversation.closed")]
+    ConversationClosed {
+        #[serde(rename = "userId")]
+        user_id: String,
+        #[serde(rename = "contactId")]
+        contact_id: String,
+    },
     #[serde(rename = "typing.changed")]
     TypingChanged {
         #[serde(rename = "userId")]
@@ -151,6 +195,8 @@ pub enum ServerEvent {
         user_id: String,
         #[serde(rename = "sampleRate")]
         sample_rate: u32,
+        #[serde(default)]
+        codec: VoiceCodec,
         samples: String,
     },
     #[serde(rename = "pong")]
@@ -165,6 +211,12 @@ pub enum ServerEvent {
 pub struct SessionReady {
     pub access_token: String,
     pub bootstrap: Bootstrap,
+    #[serde(default = "legacy_protocol_version")]
+    pub protocol_version: u16,
+}
+
+const fn legacy_protocol_version() -> u16 {
+    2
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -235,6 +287,7 @@ pub struct WireMessage {
     pub author: WireUser,
     pub body: String,
     pub created_at: String,
+    pub edited_at: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -250,6 +303,14 @@ pub struct WireError {
 pub enum MessageScope {
     Channel,
     Direct,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum VoiceCodec {
+    #[default]
+    F32,
+    Pcm16,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]

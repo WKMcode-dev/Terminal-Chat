@@ -4,6 +4,8 @@ import type { ServerEvent } from "@terminal-chat/protocol";
 
 import type { RealtimeClient } from "../services/realtime";
 
+const VOICE_SAMPLE_RATE = 24_000;
+
 export function useVoice(
   realtime: RealtimeClient | undefined,
   roomId: string | undefined,
@@ -79,6 +81,7 @@ export function useVoice(
           },
         });
         const input = context.createMediaStreamSource(stream);
+        const codec = realtime.preferredVoiceCodec();
         const node = context.createScriptProcessor(
           2_048,
           input.channelCount || 1,
@@ -99,8 +102,21 @@ export function useVoice(
             type: "voice.audio",
             payload: {
               roomId: activeRoomId,
-              sampleRate: event.inputBuffer.sampleRate,
-              samples: float32ToBase64(samples),
+              sampleRate:
+                codec === "pcm16"
+                  ? VOICE_SAMPLE_RATE
+                  : event.inputBuffer.sampleRate,
+              codec,
+              samples:
+                codec === "pcm16"
+                  ? pcm16ToBase64(
+                      resample(
+                        samples,
+                        event.inputBuffer.sampleRate,
+                        VOICE_SAMPLE_RATE,
+                      ),
+                    )
+                  : float32ToBase64(samples),
             },
           });
         };
@@ -113,7 +129,7 @@ export function useVoice(
         if (
           !realtime.send({
             type: "voice.join",
-            payload: { roomId: activeRoomId },
+            payload: { roomId: activeRoomId, codec },
           })
         ) {
           throw new Error("A conexão em tempo real ainda não está pronta");
@@ -212,6 +228,7 @@ export function useVoice(
         playAudio(
           event.payload.samples,
           event.payload.sampleRate,
+          event.payload.codec ?? "f32",
           audioContext.current,
           nextPlayback,
         );
@@ -241,6 +258,20 @@ export function useVoice(
   };
 }
 
+function pcm16ToBase64(samples: Float32Array): string {
+  const buffer = new ArrayBuffer(samples.length * 2);
+  const view = new DataView(buffer);
+  for (let index = 0; index < samples.length; index += 1) {
+    const sample = Math.max(-1, Math.min(1, samples[index] ?? 0));
+    view.setInt16(index * 2, Math.round(sample * 32_767), true);
+  }
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+  for (let index = 0; index < bytes.length; index += 1)
+    binary += String.fromCharCode(bytes[index]!);
+  return btoa(binary);
+}
+
 function float32ToBase64(samples: Float32Array): string {
   const bytes = new Uint8Array(samples.byteLength);
   bytes.set(
@@ -255,22 +286,54 @@ function float32ToBase64(samples: Float32Array): string {
 function playAudio(
   encoded: string,
   sampleRate: number,
+  codec: "f32" | "pcm16",
   context: AudioContext | undefined,
   nextPlayback: React.RefObject<number>,
 ): void {
   if (!context) return;
   const binary = atob(encoded);
-  if (binary.length % 4 !== 0) return;
+  const bytesPerSample = codec === "pcm16" ? 2 : 4;
+  if (binary.length % bytesPerSample !== 0) return;
   const bytes = new Uint8Array(binary.length);
   for (let index = 0; index < binary.length; index += 1)
     bytes[index] = binary.charCodeAt(index);
-  const samples = new Float32Array(bytes.buffer);
+  const samples =
+    codec === "pcm16"
+      ? pcm16ToFloat32(bytes.buffer)
+      : new Float32Array(bytes.buffer);
   const buffer = context.createBuffer(1, samples.length, sampleRate);
-  buffer.copyToChannel(samples, 0);
+  buffer.copyToChannel(new Float32Array(samples), 0);
   const source = context.createBufferSource();
   source.buffer = buffer;
   source.connect(context.destination);
   const start = Math.max(context.currentTime + 0.02, nextPlayback.current);
   source.start(start);
   nextPlayback.current = start + buffer.duration;
+}
+
+function pcm16ToFloat32(buffer: ArrayBuffer): Float32Array {
+  const view = new DataView(buffer);
+  const samples = new Float32Array(buffer.byteLength / 2);
+  for (let index = 0; index < samples.length; index += 1)
+    samples[index] = view.getInt16(index * 2, true) / 32_768;
+  return samples;
+}
+
+function resample(
+  source: Float32Array,
+  from: number,
+  to: number,
+): Float32Array {
+  if (source.length === 0 || from === to) return source.slice();
+  const length = Math.max(1, Math.floor((source.length * to) / from));
+  const output = new Float32Array(length);
+  for (let index = 0; index < length; index += 1) {
+    const position = (index * from) / to;
+    const left = Math.floor(position);
+    const right = Math.min(left + 1, source.length - 1);
+    const fraction = position - left;
+    output[index] =
+      (source[left] ?? 0) * (1 - fraction) + (source[right] ?? 0) * fraction;
+  }
+  return output;
 }

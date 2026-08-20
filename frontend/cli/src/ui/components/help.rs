@@ -25,6 +25,8 @@ pub fn render_help(frame: &mut Frame, app: &App, theme: Theme) {
         shortcut(navigation_keys, "Navega pelos itens", theme),
         shortcut("PgUp / PgDn", "Percorre o histórico de mensagens", theme),
         shortcut("Home / End", "Vai ao início ou fim do histórico", theme),
+        shortcut("E / D", "Edita ou exclui sua mensagem selecionada", theme),
+        shortcut("X", "Fecha a conversa sem remover a amizade", theme),
         shortcut("Enter", "Abre, envia ou altera o item selecionado", theme),
         shortcut("F2", "Ativa ou silencia o microfone", theme),
         shortcut("F3", "Ativa ou silencia todo o áudio", theme),

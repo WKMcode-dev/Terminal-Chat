@@ -22,8 +22,8 @@ describe("Terminal Chat server", () => {
     expect(health.statusCode).toBe(200);
     expect(health.json()).toMatchObject({
       status: "ok",
-      version: "2.3.2",
-      protocol: 2,
+      version: "2.4.0",
+      protocol: 3,
       storage: "json",
     });
   });
@@ -259,6 +259,8 @@ describe("Terminal Chat server", () => {
     const nakiReady = await nextSocketEventOfType(nakiSocket, "session.ready");
     const kennethId = kennethReady.payload.bootstrap.self.id;
     const nakiId = nakiReady.payload.bootstrap.self.id;
+    expect(kennethReady.payload.bootstrap.conversations).toEqual([]);
+    expect(nakiReady.payload.bootstrap.conversations).toEqual([]);
 
     const profileOnKenneth = nextSocketEventOfType(
       kennethSocket,
@@ -305,6 +307,14 @@ describe("Terminal Chat server", () => {
       nakiSocket,
       "friendship.changed",
     );
+    const conversationOnKenneth = nextSocketEventOfType(
+      kennethSocket,
+      "conversation.opened",
+    );
+    const conversationOnNaki = nextSocketEventOfType(
+      nakiSocket,
+      "conversation.opened",
+    );
     nakiSocket.send(
       JSON.stringify({
         type: "friend.respond",
@@ -313,6 +323,169 @@ describe("Terminal Chat server", () => {
     );
     expect((await acceptedOnKenneth).payload.status).toBe("accepted");
     expect((await acceptedOnNaki).payload.status).toBe("accepted");
+    expect((await conversationOnKenneth).payload.contact.id).toBe(nakiId);
+    expect((await conversationOnNaki).payload.contact.id).toBe(kennethId);
+
+    const removedOnKenneth = nextSocketEventOfType(
+      kennethSocket,
+      "friendship.removed",
+    );
+    const removedOnNaki = nextSocketEventOfType(
+      nakiSocket,
+      "friendship.removed",
+    );
+    kennethSocket.send(
+      JSON.stringify({
+        type: "friend.remove",
+        payload: { userId: nakiId },
+      }),
+    );
+    expect((await removedOnKenneth).payload.otherUserId).toBe(nakiId);
+    expect((await removedOnNaki).payload.userId).toBe(kennethId);
+    kennethSocket.close();
+    nakiSocket.close();
+  });
+
+  it("requires friendship for direct chat and supports message and conversation CRUD", async () => {
+    const { server } = await testServer();
+    const kennethToken = await registerUser(server, {
+      username: "kenneth-messages",
+      displayName: "Kenneth",
+    });
+    const nakiToken = await registerUser(server, {
+      username: "naki-messages",
+      displayName: "Naki",
+    });
+    const kennethSocket = (await server.injectWS(
+      "/ws",
+    )) as unknown as TestSocket;
+    const nakiSocket = (await server.injectWS("/ws")) as unknown as TestSocket;
+    kennethSocket.send(
+      JSON.stringify({
+        type: "auth.resume",
+        payload: { accessToken: kennethToken },
+      }),
+    );
+    const kennethReady = await nextSocketEventOfType(
+      kennethSocket,
+      "session.ready",
+    );
+    nakiSocket.send(
+      JSON.stringify({
+        type: "auth.resume",
+        payload: { accessToken: nakiToken },
+      }),
+    );
+    const nakiReady = await nextSocketEventOfType(nakiSocket, "session.ready");
+    const kennethId = kennethReady.payload.bootstrap.self.id;
+    const nakiId = nakiReady.payload.bootstrap.self.id;
+
+    const friendshipRequired = nextSocketEventOfType(kennethSocket, "error");
+    kennethSocket.send(
+      JSON.stringify({
+        type: "message.send",
+        payload: {
+          clientId: "00000000-0000-4000-8000-000000000081",
+          scope: "direct",
+          targetId: nakiId,
+          body: "Ainda não somos amigos",
+        },
+      }),
+    );
+    expect((await friendshipRequired).payload.code).toBe("FRIENDSHIP_REQUIRED");
+
+    const voiceFriendshipRequired = nextSocketEventOfType(
+      kennethSocket,
+      "error",
+    );
+    kennethSocket.send(
+      JSON.stringify({
+        type: "voice.join",
+        payload: {
+          roomId: `direct:${[kennethId, nakiId].sort().join(":")}`,
+          codec: "pcm16",
+        },
+      }),
+    );
+    expect((await voiceFriendshipRequired).payload.code).toBe(
+      "VOICE_ROOM_FORBIDDEN",
+    );
+
+    const requested = nextSocketEventOfType(
+      kennethSocket,
+      "friendship.changed",
+    );
+    kennethSocket.send(
+      JSON.stringify({ type: "friend.request", payload: { userId: nakiId } }),
+    );
+    const request = await requested;
+    const accepted = nextSocketEventOfType(kennethSocket, "friendship.changed");
+    const openedForKenneth = nextSocketEventOfType(
+      kennethSocket,
+      "conversation.opened",
+    );
+    const openedForNaki = nextSocketEventOfType(
+      nakiSocket,
+      "conversation.opened",
+    );
+    nakiSocket.send(
+      JSON.stringify({
+        type: "friend.respond",
+        payload: { friendshipId: request.payload.id, action: "accept" },
+      }),
+    );
+    await accepted;
+    await openedForKenneth;
+    await openedForNaki;
+
+    const createdForKenneth = nextSocketEventOfType(
+      kennethSocket,
+      "message.created",
+    );
+    const createdForNaki = nextSocketEventOfType(nakiSocket, "message.created");
+    kennethSocket.send(
+      JSON.stringify({
+        type: "message.send",
+        payload: {
+          clientId: "00000000-0000-4000-8000-000000000082",
+          scope: "direct",
+          targetId: nakiId,
+          body: "Mensagem original",
+        },
+      }),
+    );
+    const created = await createdForKenneth;
+    expect((await createdForNaki).payload.body).toBe("Mensagem original");
+
+    const updatedForNaki = nextSocketEventOfType(nakiSocket, "message.updated");
+    kennethSocket.send(
+      JSON.stringify({
+        type: "message.edit",
+        payload: { messageId: created.payload.id, body: "Mensagem editada" },
+      }),
+    );
+    expect((await updatedForNaki).payload.editedAt).toBeTruthy();
+
+    const deletedForNaki = nextSocketEventOfType(nakiSocket, "message.deleted");
+    kennethSocket.send(
+      JSON.stringify({
+        type: "message.delete",
+        payload: { messageId: created.payload.id },
+      }),
+    );
+    expect((await deletedForNaki).payload.messageId).toBe(created.payload.id);
+
+    const closed = nextSocketEventOfType(kennethSocket, "conversation.closed");
+    kennethSocket.send(
+      JSON.stringify({
+        type: "conversation.close",
+        payload: { userId: nakiId },
+      }),
+    );
+    expect((await closed).payload).toMatchObject({
+      userId: kennethId,
+      contactId: nakiId,
+    });
     kennethSocket.close();
     nakiSocket.close();
   });

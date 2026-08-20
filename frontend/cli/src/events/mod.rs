@@ -150,6 +150,7 @@ fn handle_key(app: &mut App, key: KeyEvent) {
         KeyCode::F(3) => app.toggle_deafen(),
         KeyCode::F(4) => app.toggle_voice(),
         KeyCode::F(9) => app.toggle_microphone_test(),
+        KeyCode::Esc if app.editing_message_id.is_some() => app.cancel_message_edit(),
         KeyCode::Esc if app.show_help => app.show_help = false,
         KeyCode::Esc if !app.input.value().is_empty() => app.input.clear(),
         KeyCode::Esc if app.focus != Focus::Navigation => app.return_to_navigation(),
@@ -178,6 +179,9 @@ fn handle_focused_key(app: &mut App, key: KeyEvent) {
             KeyCode::Up | KeyCode::Char('k') => app.previous_list_item(),
             KeyCode::Down | KeyCode::Char('j') => app.next_list_item(),
             KeyCode::Enter | KeyCode::Right => app.activate_selected_item(),
+            KeyCode::Char('x' | 'X') if app.section == Section::Conversations => {
+                app.close_selected_conversation()
+            }
             KeyCode::Left => app.return_to_navigation(),
             _ => {}
         },
@@ -211,6 +215,11 @@ fn handle_content_key(app: &mut App, key_code: KeyCode) {
             KeyCode::End => app.move_message_selection(MessageMovement::Last),
             KeyCode::Left => app.focus = Focus::List,
             KeyCode::Enter | KeyCode::Right => app.focus = Focus::Composer,
+            KeyCode::Char('e' | 'E') => app.begin_edit_selected_message(),
+            KeyCode::Char('d' | 'D') => app.delete_selected_message(),
+            KeyCode::Char('x' | 'X') if app.section == Section::Conversations => {
+                app.close_selected_conversation()
+            }
             _ => {}
         },
         Section::Profiles => match key_code {

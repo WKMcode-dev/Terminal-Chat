@@ -249,6 +249,13 @@ export function ProfilesPanel({
                         break;
                       case "remove":
                       case "unblock":
+                        if (
+                          action === "remove" &&
+                          !window.confirm(
+                            `Remover @${profile.username} da sua lista de amigos? A conversa também será fechada.`,
+                          )
+                        )
+                          break;
                         send(
                           {
                             type: "friend.remove",
@@ -260,6 +267,12 @@ export function ProfilesPanel({
                         );
                         break;
                       case "block":
+                        if (
+                          !window.confirm(
+                            `Bloquear @${profile.username}? A amizade e a conversa serão removidas.`,
+                          )
+                        )
+                          break;
                         send(
                           {
                             type: "friend.block",
@@ -397,16 +410,20 @@ function ProfileActions({
           onClick={() => onAction("remove")}
         />
       )}
-      <Action
-        icon={<MessageCircle size={14} />}
-        label="Mensagem"
-        onClick={() => onAction("message")}
-      />
-      <Action
-        icon={<Phone size={14} />}
-        label="Chamar"
-        onClick={() => onAction("call")}
-      />
+      {relationship.type === "friends" && (
+        <>
+          <Action
+            icon={<MessageCircle size={14} />}
+            label="Mensagem"
+            onClick={() => onAction("message")}
+          />
+          <Action
+            icon={<Phone size={14} />}
+            label="Chamar"
+            onClick={() => onAction("call")}
+          />
+        </>
+      )}
       <Action
         danger
         icon={<Ban size={14} />}

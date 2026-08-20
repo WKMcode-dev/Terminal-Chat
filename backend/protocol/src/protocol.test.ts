@@ -29,7 +29,8 @@ describe("Terminal Chat protocol", () => {
       type: "voice.audio",
       payload: {
         roomId: "channel:test",
-        sampleRate: 48_000,
+        sampleRate: 24_000,
+        codec: "pcm16",
         samples: "AAAAAA==",
       },
     });
@@ -44,6 +45,29 @@ describe("Terminal Chat protocol", () => {
         },
       }),
     ).toThrow();
+  });
+
+  it("validates social, conversation and message CRUD events", () => {
+    const userId = "00000000-0000-4000-8000-000000000002";
+    const messageId = "00000000-0000-4000-8000-000000000003";
+    expect(
+      ClientEventSchema.parse({
+        type: "conversation.close",
+        payload: { userId },
+      }).type,
+    ).toBe("conversation.close");
+    expect(
+      ClientEventSchema.parse({
+        type: "message.edit",
+        payload: { messageId, body: "Texto corrigido" },
+      }).type,
+    ).toBe("message.edit");
+    expect(
+      ClientEventSchema.parse({
+        type: "message.delete",
+        payload: { messageId },
+      }).type,
+    ).toBe("message.delete");
   });
 
   it("validates profile and friendship actions", () => {

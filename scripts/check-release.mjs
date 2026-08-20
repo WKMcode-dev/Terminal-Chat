@@ -139,11 +139,7 @@ for (const relativePath of requiredFiles) {
   );
 }
 
-for (const script of [
-  "audit:production",
-  "release:check",
-  "release:windows",
-]) {
+for (const script of ["audit:production", "release:check", "release:windows"]) {
   requireCondition(
     typeof rootPackage.scripts?.[script] === "string",
     `o comando npm ${script} está ausente`,

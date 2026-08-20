@@ -29,6 +29,7 @@ export type AuthResponse = z.infer<typeof AuthResponseSchema>;
 export const SessionReadySchema = z.object({
   accessToken: z.string().min(20),
   bootstrap: BootstrapSchema,
+  protocolVersion: z.number().int().positive().default(2),
 });
 export type SessionReady = z.infer<typeof SessionReadySchema>;
 

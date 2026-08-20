@@ -1,5 +1,27 @@
 # Histórico de versões
 
+## 2.4.0
+
+- restringe conversas diretas, mensagens, digitação e voz a amizades aceitas;
+- impede que contas recém-criadas apareçam automaticamente na lista de
+  conversas de todos os usuários;
+- adiciona abrir e fechar conversas sem apagar o histórico, com sincronização
+  entre CLI, desktop, JSON local e PostgreSQL/Neon;
+- remove a conversa dos dois participantes ao desfazer uma amizade ou bloquear
+  alguém e encerra qualquer sala de voz direta ativa entre eles;
+- completa o CRUD das mensagens próprias com criação otimista, leitura do
+  histórico, edição, exclusão e indicadores de envio pendente ou editado;
+- reduz o áudio novo de PCM `f32` na taxa nativa para PCM16 mono a 24 kHz,
+  diminuindo em aproximadamente 75% o tráfego típico sem gravar voz no banco;
+- negocia a versão do protocolo e converte áudio por destinatário para manter
+  clientes 2.3.2 funcionando enquanto a atualização é distribuída;
+- adiciona migrações automáticas e não destrutivas para `edited_at` e
+  `hidden_conversations` no Neon/PostgreSQL;
+- aproxima a navegação do Discord com conversas fecháveis, ações contextuais
+  de editar/excluir e acesso a mensagens/chamadas apenas entre amigos;
+- amplia os testes de protocolo, persistência, autorização social, CRUD de
+  mensagens e conversão de áudio.
+
 ## 2.3.2
 
 - adiciona um pipeline Windows reproduzível para gerar instalador NSIS e CLI
@@ -20,6 +42,8 @@
   arquivo JSON quanto no PostgreSQL, sem apagar mensagens ou perfis;
 - compila o pacote compartilhado de protocolo antes da suíte de testes,
   permitindo que o workflow funcione também em um checkout limpo do GitHub;
+- calcula os hashes por meio da API criptográfica do .NET, sem depender do
+  cmdlet opcional `Get-FileHash` no runner Windows;
 - gera hashes SHA-256 e documenta o limite de distribuição sem assinatura de
   código perante SmartScreen e Controle Inteligente de Aplicativos.
 

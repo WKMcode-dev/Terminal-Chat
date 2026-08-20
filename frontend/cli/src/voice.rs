@@ -14,7 +14,9 @@ use cpal::{
 };
 use tokio::sync::mpsc::UnboundedSender;
 
-use crate::protocol::ClientEvent;
+use crate::protocol::{ClientEvent, VoiceCodec};
+
+const NETWORK_SAMPLE_RATE: u32 = 24_000;
 
 pub struct VoiceEngine {
     input: Option<Stream>,
@@ -45,6 +47,7 @@ impl VoiceEngine {
         &mut self,
         room_id: String,
         sender: UnboundedSender<ClientEvent>,
+        codec: VoiceCodec,
     ) -> Result<()> {
         self.stop();
         let host = cpal::default_host();
@@ -64,6 +67,7 @@ impl VoiceEngine {
             input_format,
             room_id,
             sender,
+            codec,
             Arc::clone(&self.muted),
             Arc::clone(&self.input_level),
         )?;
@@ -141,15 +145,33 @@ impl VoiceEngine {
         f32::from_bits(self.input_level.load(Ordering::Relaxed))
     }
 
-    pub fn queue_base64(&self, samples: &str, source_sample_rate: u32) -> Result<()> {
+    pub fn queue_base64(
+        &self,
+        samples: &str,
+        source_sample_rate: u32,
+        codec: VoiceCodec,
+    ) -> Result<()> {
         let bytes = STANDARD.decode(samples).context("áudio recebido em formato inválido")?;
-        if bytes.len() % 4 != 0 {
-            return Err(anyhow!("o bloco de áudio não contém amostras f32 completas"));
-        }
-        let source = bytes
-            .chunks_exact(4)
-            .map(|chunk| f32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]))
-            .collect::<Vec<_>>();
+        let source = match codec {
+            VoiceCodec::F32 => {
+                if bytes.len() % 4 != 0 {
+                    return Err(anyhow!("o bloco de áudio não contém amostras f32 completas"));
+                }
+                bytes
+                    .chunks_exact(4)
+                    .map(|chunk| f32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]))
+                    .collect::<Vec<_>>()
+            }
+            VoiceCodec::Pcm16 => {
+                if bytes.len() % 2 != 0 {
+                    return Err(anyhow!("o bloco de áudio não contém amostras PCM16 completas"));
+                }
+                bytes
+                    .chunks_exact(2)
+                    .map(|chunk| i16::from_le_bytes([chunk[0], chunk[1]]) as f32 / 32_768.0)
+                    .collect::<Vec<_>>()
+            }
+        };
         let samples = resample(&source, source_sample_rate, self.output_sample_rate);
         if let Ok(mut playback) = self.playback.lock() {
             let maximum = self.output_sample_rate as usize * 2;
@@ -170,6 +192,7 @@ fn build_input(
     format: SampleFormat,
     room_id: String,
     sender: UnboundedSender<ClientEvent>,
+    codec: VoiceCodec,
     muted: Arc<AtomicBool>,
     input_level: Arc<AtomicU32>,
 ) -> Result<Stream> {
@@ -186,6 +209,7 @@ fn build_input(
                     sample_rate,
                     &room_id,
                     &sender,
+                    codec,
                     &muted,
                     &input_level,
                 )
@@ -203,6 +227,7 @@ fn build_input(
                     sample_rate,
                     &room_id,
                     &sender,
+                    codec,
                     &muted,
                     &input_level,
                 )
@@ -223,6 +248,7 @@ fn build_input(
                     sample_rate,
                     &room_id,
                     &sender,
+                    codec,
                     &muted,
                     &input_level,
                 )
@@ -241,6 +267,7 @@ fn publish_input(
     sample_rate: u32,
     room_id: &str,
     sender: &UnboundedSender<ClientEvent>,
+    codec: VoiceCodec,
     muted: &AtomicBool,
     input_level: &AtomicU32,
 ) {
@@ -253,13 +280,29 @@ fn publish_input(
         .map(|frame| frame.iter().copied().sum::<f32>() / frame.len() as f32)
         .collect::<Vec<_>>();
     update_input_level(&mono, input_level);
-    let mut bytes = Vec::with_capacity(mono.len() * 4);
-    for sample in mono {
-        bytes.extend_from_slice(&sample.clamp(-1.0, 1.0).to_le_bytes());
-    }
+    let (network_sample_rate, bytes) = match codec {
+        VoiceCodec::Pcm16 => {
+            let network_samples = resample(&mono, sample_rate, NETWORK_SAMPLE_RATE);
+            let mut bytes = Vec::with_capacity(network_samples.len() * 2);
+            for sample in network_samples {
+                let encoded =
+                    (sample.clamp(-1.0, 1.0) * i16::MAX as f32).round() as i16;
+                bytes.extend_from_slice(&encoded.to_le_bytes());
+            }
+            (NETWORK_SAMPLE_RATE, bytes)
+        }
+        VoiceCodec::F32 => {
+            let mut bytes = Vec::with_capacity(mono.len() * 4);
+            for sample in mono {
+                bytes.extend_from_slice(&sample.clamp(-1.0, 1.0).to_le_bytes());
+            }
+            (sample_rate, bytes)
+        }
+    };
     let _ = sender.send(ClientEvent::VoiceAudio {
         room_id: room_id.to_owned(),
-        sample_rate,
+        sample_rate: network_sample_rate,
+        codec,
         samples: STANDARD.encode(bytes),
     });
 }

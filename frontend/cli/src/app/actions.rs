@@ -271,13 +271,10 @@ impl App {
     }
 
     pub fn open_selected_profile_conversation(&mut self) {
-        if matches!(
-            self.selected_profile_relationship(),
-            ProfileRelationship::CurrentUser
-                | ProfileRelationship::Blocked
-                | ProfileRelationship::BlockedBy
-        ) {
-            self.notice = Some("Não é possível abrir essa conversa".to_owned());
+        if self.selected_profile_relationship() != ProfileRelationship::Friends {
+            self.notice = Some(
+                "Aceite a amizade antes de abrir uma conversa direta".to_owned(),
+            );
             return;
         }
         let Some(user_id) = self.selected_profile().map(|profile| profile.id.clone()) else {
@@ -288,7 +285,28 @@ impl App {
             .iter()
             .position(|conversation| conversation.contact.id == user_id)
         else {
-            self.notice = Some("A conversa ainda não está disponível".to_owned());
+            if let Some(profile) = self.profiles.iter().find(|profile| profile.id == user_id) {
+                self.conversations.push(Conversation::new(
+                    crate::friends::Contact::with_id(
+                        profile.id.clone(),
+                        profile.display_name.clone(),
+                        profile.handle.clone(),
+                        profile.presence,
+                        profile.activity.clone(),
+                        0,
+                    ),
+                    Vec::new(),
+                ));
+                let index = self.conversations.len().saturating_sub(1);
+                self.section = Section::Conversations;
+                self.selected_conversation = index;
+                self.active_conversation = index;
+                self.focus = Focus::Composer;
+            }
+            self.send_profile_event(
+                ClientEvent::ConversationOpen { user_id },
+                "Abrindo conversa...",
+            );
             return;
         };
         self.section = Section::Conversations;
@@ -316,6 +334,16 @@ impl App {
             self.execute_command(command);
             return;
         }
+        if let Some(message_id) = self.editing_message_id.take() {
+            self.send_profile_event(
+                ClientEvent::MessageEdit {
+                    message_id,
+                    body: message,
+                },
+                "Alteração enviada",
+            );
+            return;
+        }
         if let Some(realtime) = self.realtime.as_ref() {
             let target = match self.section {
                 Section::Conversations => self
@@ -329,13 +357,39 @@ impl App {
                 _ => None,
             };
             let Some((scope, target_id)) = target else { return };
+            let client_id = uuid::Uuid::new_v4().to_string();
             self.notice = match realtime.send(ClientEvent::MessageSend {
-                client_id: uuid::Uuid::new_v4().to_string(),
+                client_id: client_id.clone(),
                 scope,
                 target_id,
-                body: message,
+                body: message.clone(),
             }) {
-                Ok(()) => None,
+                Ok(()) => {
+                    let optimistic = ChatMessage::pending(
+                        client_id,
+                        self.self_user_id.clone(),
+                        message,
+                    );
+                    match self.section {
+                        Section::Conversations => {
+                            if let Some(conversation) =
+                                self.conversations.get_mut(self.active_conversation)
+                            {
+                                conversation.messages.push(optimistic);
+                                self.selected_message =
+                                    conversation.messages.len().saturating_sub(1);
+                            }
+                        }
+                        Section::Channels => {
+                            if let Some(channel) = self.channels.get_mut(self.active_channel) {
+                                channel.messages.push(optimistic);
+                                self.selected_message = channel.messages.len().saturating_sub(1);
+                            }
+                        }
+                        _ => {}
+                    }
+                    None
+                }
                 Err(error) => Some(format!("Não foi possível enviar: {error}")),
             };
             return;
@@ -357,6 +411,71 @@ impl App {
                 }
             }
             _ => {}
+        }
+    }
+
+    pub fn close_selected_conversation(&mut self) {
+        let index = if self.focus == Focus::List {
+            self.selected_conversation
+        } else {
+            self.active_conversation
+        };
+        let Some(contact_id) = self
+            .conversations
+            .get(index)
+            .map(|conversation| conversation.contact.id.clone())
+        else {
+            return;
+        };
+        self.send_profile_event(
+            ClientEvent::ConversationClose {
+                user_id: contact_id,
+            },
+            "Conversa fechada; a amizade foi mantida",
+        );
+    }
+
+    pub fn begin_edit_selected_message(&mut self) {
+        let Some(message) = self.selected_message().cloned() else {
+            return;
+        };
+        if message.author_id != self.self_user_id || message.pending {
+            self.notice = Some("Somente mensagens já enviadas por você podem ser editadas".to_owned());
+            return;
+        }
+        self.editing_message_id = Some(message.id);
+        self.input.clear();
+        self.input.insert_str(&message.body);
+        self.focus = Focus::Composer;
+        self.notice = Some("Editando mensagem — Enter salva; Esc cancela".to_owned());
+    }
+
+    pub fn delete_selected_message(&mut self) {
+        let Some(message) = self.selected_message().cloned() else {
+            return;
+        };
+        if message.author_id != self.self_user_id || message.pending {
+            self.notice = Some("Somente mensagens já enviadas por você podem ser excluídas".to_owned());
+            return;
+        }
+        if self.pending_message_delete.as_deref() != Some(message.id.as_str()) {
+            self.pending_message_delete = Some(message.id);
+            self.notice = Some("Pressione D novamente para excluir a mensagem para todos".to_owned());
+            return;
+        }
+        self.pending_message_delete = None;
+        self.send_profile_event(
+            ClientEvent::MessageDelete {
+                message_id: message.id,
+            },
+            "Exclusão enviada",
+        );
+    }
+
+    pub fn cancel_message_edit(&mut self) {
+        if self.editing_message_id.take().is_some() {
+            self.input.clear();
+            self.notice = Some("Edição cancelada".to_owned());
         }
     }
 
@@ -520,9 +639,15 @@ impl App {
             self.notice = Some("A voz requer conexão com o servidor".to_owned());
             return;
         };
-        match self.voice.start(room_id.clone(), realtime.sender()) {
+        match self
+            .voice
+            .start(room_id.clone(), realtime.sender(), self.voice_codec)
+        {
             Ok(()) => {
-                if let Err(error) = realtime.send(ClientEvent::VoiceJoin { room_id: room_id.clone() }) {
+                if let Err(error) = realtime.send(ClientEvent::VoiceJoin {
+                    room_id: room_id.clone(),
+                    codec: self.voice_codec,
+                }) {
                     self.voice.stop();
                     self.notice = Some(format!("Não foi possível entrar na voz: {error}"));
                     return;
@@ -589,20 +714,22 @@ impl App {
     }
 
     fn selected_message_text(&self) -> Option<&str> {
+        self.selected_message().map(|message| message.body.as_str())
+    }
+
+    fn selected_message(&self) -> Option<&ChatMessage> {
         let selected = self.message_selection(self.active_message_count())?;
         match self.section {
             Section::Conversations => self
                 .conversations
                 .get(self.active_conversation)?
                 .messages
-                .get(selected)
-                .map(|message| message.body.as_str()),
+                .get(selected),
             Section::Channels => self
                 .channels
                 .get(self.active_channel)?
                 .messages
-                .get(selected)
-                .map(|message| message.body.as_str()),
+                .get(selected),
             _ => None,
         }
     }
@@ -623,10 +750,7 @@ impl App {
                 }),
             Section::Profiles => self.selected_profile().and_then(|profile| {
                 if profile.is_current_user
-                    || matches!(
-                        self.selected_profile_relationship(),
-                        ProfileRelationship::Blocked | ProfileRelationship::BlockedBy
-                    )
+                    || self.selected_profile_relationship() != ProfileRelationship::Friends
                 {
                     return None;
                 }

@@ -123,4 +123,49 @@ describe("JsonRepository social profiles", () => {
     expect(await repository.deleteUser(kenneth.id)).toBe(false);
     await repository.close();
   });
+
+  it("persists conversation visibility and edits or deletes owned messages", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "terminal-chat-crud-"));
+    const repository = new JsonRepository(join(directory, "data.json"));
+    await repository.init();
+    const kenneth = await repository.createUser({
+      username: "kenneth-crud",
+      displayName: "Kenneth",
+      passwordHash: "hash-a",
+    });
+    const naki = await repository.createUser({
+      username: "naki-crud",
+      displayName: "Naki",
+      passwordHash: "hash-b",
+    });
+    const request = await repository.createFriendRequest(kenneth.id, naki.id);
+    await repository.respondFriendRequest(naki.id, request.id, "accept");
+    expect(await repository.hasAcceptedFriendship(kenneth.id, naki.id)).toBe(
+      true,
+    );
+
+    await repository.hideConversation(kenneth.id, naki.id);
+    expect(await repository.listHiddenConversationIds(kenneth.id)).toEqual([
+      naki.id,
+    ]);
+    await repository.showConversation(kenneth.id, naki.id);
+    expect(await repository.listHiddenConversationIds(kenneth.id)).toEqual([]);
+
+    const created = await repository.createMessage({
+      clientId: "00000000-0000-4000-8000-000000000098",
+      scope: "direct",
+      targetId: naki.id,
+      authorId: kenneth.id,
+      body: "Mensagem original",
+    });
+    const updated = await repository.updateMessage(
+      created.id,
+      "Mensagem editada",
+    );
+    expect(updated).toMatchObject({ body: "Mensagem editada" });
+    expect(updated?.editedAt).toBeTruthy();
+    expect((await repository.deleteMessage(created.id))?.id).toBe(created.id);
+    expect(await repository.findMessageById(created.id)).toBeUndefined();
+    await repository.close();
+  });
 });

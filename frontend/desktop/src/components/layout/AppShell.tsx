@@ -61,27 +61,38 @@ export function AppShell({ accessToken, realtime, onLogout }: AppShellProps) {
   const voice = useVoice(realtime, roomId);
 
   function sendMessage(body: string): boolean {
+    const clientId = crypto.randomUUID();
     if (store.view === "channels" && channel) {
-      return realtime.send({
+      const input = {
+        clientId,
+        scope: "channel" as const,
+        targetId: channel.id,
+        body,
+      };
+      store.queueMessage(input);
+      const sent = realtime.send({
         type: "message.send",
-        payload: {
-          clientId: crypto.randomUUID(),
-          scope: "channel",
-          targetId: channel.id,
-          body,
-        },
+        payload: input,
       });
+      if (!sent) store.failMessage(clientId);
+      else window.setTimeout(() => store.failMessage(clientId), 15_000);
+      return sent;
     }
     if (store.view === "conversations" && conversation) {
-      return realtime.send({
+      const input = {
+        clientId,
+        scope: "direct" as const,
+        targetId: conversation.contact.id,
+        body,
+      };
+      store.queueMessage(input);
+      const sent = realtime.send({
         type: "message.send",
-        payload: {
-          clientId: crypto.randomUUID(),
-          scope: "direct",
-          targetId: conversation.contact.id,
-          body,
-        },
+        payload: input,
       });
+      if (!sent) store.failMessage(clientId);
+      else window.setTimeout(() => store.failMessage(clientId), 15_000);
+      return sent;
     }
     return false;
   }
@@ -128,6 +139,15 @@ export function AppShell({ accessToken, realtime, onLogout }: AppShellProps) {
         conversations={store.conversations}
         onChannel={store.selectChannel}
         onContact={store.selectContact}
+        onCloseConversation={(contactId) => {
+          if (
+            realtime.send({
+              type: "conversation.close",
+              payload: { userId: contactId },
+            })
+          )
+            store.closeConversation(contactId);
+        }}
         onCreateChannel={() => setChannelDialog(true)}
         view={store.view}
       />
@@ -145,7 +165,13 @@ export function AppShell({ accessToken, realtime, onLogout }: AppShellProps) {
                 void voice.join(directRoom);
               }
             }}
-            onMessage={store.selectContact}
+            onMessage={(userId) => {
+              store.openConversation(userId);
+              realtime.send({
+                type: "conversation.open",
+                payload: { userId },
+              });
+            }}
             profiles={store.profiles}
             realtime={realtime}
           />
@@ -167,6 +193,19 @@ export function AppShell({ accessToken, realtime, onLogout }: AppShellProps) {
                   : conversation!.messages
               }
               onSend={sendMessage}
+              onDeleteMessage={(messageId) =>
+                realtime.send({
+                  type: "message.delete",
+                  payload: { messageId },
+                })
+              }
+              onEditMessage={(messageId, body) =>
+                realtime.send({
+                  type: "message.edit",
+                  payload: { messageId, body },
+                })
+              }
+              pendingMessageIds={store.pendingMessageIds}
               subtitle={
                 store.view === "channels"
                   ? `${channel!.membersOnline} online • ${channel!.description}`

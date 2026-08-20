@@ -1,4 +1,4 @@
-import { Hash, MessageCircle, Plus } from "lucide-react";
+import { Hash, MessageCircle, Plus, X } from "lucide-react";
 
 import type { Channel, Conversation } from "@terminal-chat/protocol";
 
@@ -12,6 +12,7 @@ interface SidebarProps {
   activeContactId?: string;
   onChannel: (id: string) => void;
   onContact: (id: string) => void;
+  onCloseConversation: (id: string) => void;
   onCreateChannel: () => void;
 }
 
@@ -71,15 +72,20 @@ export function Sidebar(props: SidebarProps) {
               </button>
             ))
           : props.conversations.map((conversation) => (
-              <button
+              <div
                 className={
                   props.activeContactId === conversation.contact.id
                     ? "target active"
                     : "target"
                 }
                 key={conversation.contact.id}
+                role="button"
+                tabIndex={0}
                 onClick={() => props.onContact(conversation.contact.id)}
-                type="button"
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ")
+                    props.onContact(conversation.contact.id);
+                }}
               >
                 <span className={`presence ${conversation.contact.presence}`} />
                 <span>
@@ -92,7 +98,19 @@ export function Sidebar(props: SidebarProps) {
                 {conversation.unread > 0 && (
                   <b className="unread">{conversation.unread}</b>
                 )}
-              </button>
+                <button
+                  aria-label={`Fechar conversa com ${conversation.contact.displayName}`}
+                  className="target-close"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    props.onCloseConversation(conversation.contact.id);
+                  }}
+                  title="Fechar conversa"
+                  type="button"
+                >
+                  <X size={14} />
+                </button>
+              </div>
             ))}
         {((showingChannels && props.channels.length === 0) ||
           (!showingChannels && props.conversations.length === 0)) && (

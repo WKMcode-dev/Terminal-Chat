@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const PROTOCOL_VERSION = 2 as const;
+export const PROTOCOL_VERSION = 3 as const;
 
 export const IdSchema = z.string().uuid();
 export const TimestampSchema = z.string().datetime({ offset: true });
@@ -61,6 +61,7 @@ export const ChatMessageSchema = z.object({
   author: PublicUserSchema,
   body: MessageBodySchema,
   createdAt: TimestampSchema,
+  editedAt: TimestampSchema.optional(),
 });
 export type ChatMessage = z.infer<typeof ChatMessageSchema>;
 
@@ -70,6 +71,9 @@ export const ConversationSchema = z.object({
   messages: z.array(ChatMessageSchema),
 });
 export type Conversation = z.infer<typeof ConversationSchema>;
+
+export const VoiceCodecSchema = z.enum(["f32", "pcm16"]);
+export type VoiceCodec = z.infer<typeof VoiceCodecSchema>;
 
 export const FriendshipStatusSchema = z.enum([
   "pending",

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { SendHorizontal, SmilePlus } from "lucide-react";
+import { Pencil, SendHorizontal, SmilePlus, Trash2 } from "lucide-react";
 
 import type { ChatMessage, PublicUser } from "@terminal-chat/protocol";
 
@@ -11,6 +11,9 @@ interface ChatPanelProps {
   messages: ChatMessage[];
   currentUser?: PublicUser;
   onSend: (body: string) => boolean;
+  onEditMessage: (messageId: string, body: string) => boolean;
+  onDeleteMessage: (messageId: string) => boolean;
+  pendingMessageIds: string[];
   voiceBar: React.ReactNode;
 }
 
@@ -20,6 +23,9 @@ export function ChatPanel({
   messages,
   currentUser,
   onSend,
+  onEditMessage,
+  onDeleteMessage,
+  pendingMessageIds,
   voiceBar,
 }: ChatPanelProps) {
   const [body, setBody] = useState("");
@@ -71,6 +77,9 @@ export function ChatPanel({
         )}
         {messages.map((message) => {
           const mine = message.author.id === currentUser?.id;
+          const pending = Boolean(
+            message.clientId && pendingMessageIds.includes(message.clientId),
+          );
           return (
             <article
               className={mine ? "message mine" : "message"}
@@ -81,8 +90,44 @@ export function ChatPanel({
                 <p className="message-meta">
                   <strong>{mine ? "Você" : message.author.displayName}</strong>
                   <time>{formatTime(message.createdAt)}</time>
+                  {message.editedAt && <small>editada</small>}
+                  {pending && <small>enviando…</small>}
                 </p>
                 <p className="message-body">{message.body}</p>
+                {mine && !pending && (
+                  <div className="message-actions">
+                    <button
+                      aria-label="Editar mensagem"
+                      onClick={() => {
+                        const body = window
+                          .prompt("Editar mensagem", message.body)
+                          ?.trim();
+                        if (body && body !== message.body)
+                          onEditMessage(message.id, body);
+                      }}
+                      title="Editar"
+                      type="button"
+                    >
+                      <Pencil size={13} />
+                    </button>
+                    <button
+                      aria-label="Excluir mensagem"
+                      className="danger"
+                      onClick={() => {
+                        if (
+                          window.confirm(
+                            "Excluir esta mensagem para todos permanentemente?",
+                          )
+                        )
+                          onDeleteMessage(message.id);
+                      }}
+                      title="Excluir"
+                      type="button"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                )}
               </div>
             </article>
           );

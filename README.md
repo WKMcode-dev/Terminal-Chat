@@ -1,4 +1,4 @@
-# 💬 Terminal Chat v2.3.2
+# 💬 Terminal Chat v2.4.0
 
 Chat em tempo real com dois clientes: uma interface completa no terminal e um
 aplicativo desktop em Tauri. Ambos usam o mesmo servidor, as mesmas contas, os
@@ -11,12 +11,14 @@ mesmos canais, o mesmo histórico e as mesmas salas de voz.
 ## ✨ O que já funciona
 
 - cadastro, login e restauração segura da sessão;
-- mensagens diretas e canais em tempo real por WebSocket;
+- mensagens diretas somente entre amigos e canais em tempo real por WebSocket;
+- criação, histórico, edição e exclusão de mensagens próprias;
+- conversas fecháveis sem apagar o histórico, reabertas ao enviar nova mensagem;
 - histórico persistente e idempotência contra mensagens duplicadas;
 - presença online, ausente, ocupado e offline com bolinhas coloridas;
 - reconexão automática e sincronização completa após uma queda;
 - criação de canais;
-- voz PCM em tempo real entre terminal e desktop;
+- voz PCM16 otimizada em tempo real entre terminal e desktop;
 - microfone, silenciamento de áudio e contagem de participantes;
 - teste local do microfone com retorno da voz e medidor de nível;
 - perfis editáveis com avatar em emoji, bio e atividade;
@@ -32,7 +34,7 @@ mesmos canais, o mesmo histórico e as mesmas salas de voz.
 - seleção do servidor local ou hospedado diretamente na tela de login;
 - persistência local pronta para uso ou PostgreSQL para implantação;
 - Dockerfile e configuração de deploy para hospedagem gratuita;
-- validação compartilhada de todos os eventos pelo protocolo v2.
+- validação compartilhada de todos os eventos pelo protocolo v3.
 
 ## 📦 Instalar para usar
 
@@ -139,6 +141,9 @@ preparados automaticamente pelo servidor.
 | `Win+.` / `F10` / `Ctrl+E` | Abre o seletor interno de emojis            |
 | `/` / `Ctrl+F`             | Busca usuários na área Perfis               |
 | `Ctrl+C`                   | Copia a mensagem selecionada                |
+| `E`                        | Edita sua mensagem selecionada              |
+| `D` duas vezes             | Exclui sua mensagem selecionada             |
+| `X`                        | Fecha a conversa direta selecionada         |
 | `Ctrl+Q`                   | Encerra o aplicativo                        |
 | `Ctrl+Shift+Q`             | Sai da conta e volta ao login               |
 
@@ -155,17 +160,19 @@ No desktop, abra **Perfis** para editar seu nome de exibição, avatar em emoji,
 bio, atividade e presença. A busca encontra pessoas pelo nome ou `@usuário`, e
 as abas separam amigos, solicitações e bloqueios. Os cartões permitem adicionar,
 aceitar, recusar, remover, bloquear e desbloquear usuários. Os botões
-**Mensagem** e **Chamar** abrem o contato diretamente.
+**Mensagem** e **Chamar** aparecem após a amizade ser aceita e abrem o contato
+diretamente. Uma conta existente continua encontrável na busca, mas não entra
+na lista de conversas antes disso.
 
 Na CLI, selecione um perfil e use:
 
-| Tecla | Ação contextual                              |
-| ----- | -------------------------------------------- |
-| `A`   | Adiciona ou aceita uma solicitação           |
-| `R`   | Recusa, cancela ou remove uma amizade        |
-| `B`   | Bloqueia ou desbloqueia o usuário            |
-| `M`   | Abre a conversa direta                       |
-| `F4`  | Inicia ou encerra a chamada com esse usuário |
+| Tecla | Ação contextual                          |
+| ----- | ---------------------------------------- |
+| `A`   | Adiciona ou aceita uma solicitação       |
+| `R`   | Recusa, cancela ou remove uma amizade    |
+| `B`   | Bloqueia ou desbloqueia o usuário        |
+| `M`   | Abre a conversa direta com um amigo      |
+| `F4`  | Inicia ou encerra a chamada com um amigo |
 
 Pressione `/` ou `Ctrl+F` em **Perfis**, digite parte do nome ou o
 `@usuário` e confirme com `Enter`. `Esc` limpa a busca e, quando ela já estiver
@@ -173,6 +180,23 @@ vazia, retorna à lista.
 
 Perfis, amizades e bloqueios são persistidos tanto no armazenamento local
 quanto no PostgreSQL e sincronizados em tempo real entre CLI e desktop.
+
+Remover uma amizade ou bloquear alguém fecha a conversa para os dois lados.
+Fechar somente pelo `X` esconde a conversa apenas da sua lista e preserva todo
+o histórico; uma nova mensagem ou a ação **Mensagem** a abre novamente.
+
+## ✏️ CRUD de conversas e mensagens
+
+O envio aparece imediatamente na interface como pendente e é confirmado pelo
+servidor sem duplicar o texto. O autor pode editar ou excluir sua própria
+mensagem; os outros participantes recebem a mudança em tempo real. Mensagens
+editadas exibem essa indicação e mensagens excluídas deixam de fazer parte do
+histórico persistido.
+
+No desktop, passe o mouse sobre sua mensagem para usar **Editar** ou **Excluir**.
+Na CLI, selecione a mensagem e pressione `E` para editar ou `D` duas vezes para
+confirmar a exclusão. Use `X` na lista ou no conteúdo de uma conversa direta
+para fechá-la. Canais compartilhados não podem ser fechados dessa forma.
 
 ## 🔑 Conta, logout e exclusão
 
@@ -219,9 +243,15 @@ saída de áudio e o medidor confirma o nível capturado. Use fones de ouvido pa
 evitar microfonia e pressione `F9` novamente para encerrar. O teste não envia
 áudio ao servidor e não pode permanecer ativo durante uma chamada.
 
-O áudio usa blocos PCM `f32`, reamostragem no cliente e controle de fluxo no
-servidor. Salas de canal exigem associação ao canal; salas diretas aceitam
-somente os dois usuários que formam o identificador da sala.
+O áudio usa PCM16 mono a 24 kHz, reamostragem no cliente e controle de fluxo no
+servidor. Isso reduz o tráfego típico em aproximadamente 75% em relação ao PCM
+`f32` anterior. Quadros de voz passam somente pelo WebSocket em memória: eles
+não são gravados no Neon nem no armazenamento JSON. Salas de canal exigem
+associação ao canal; salas diretas exigem uma amizade aceita.
+
+Durante a transição, o protocolo negocia o codec e o servidor converte o áudio
+para clientes 2.3.2 ainda conectados. Para obter a economia completa, atualize
+todos os clientes para a versão 2.4.0.
 
 Para produção pública ou grupos muito grandes, a evolução recomendada é trocar o
 transporte PCM por Opus/WebRTC ou LiveKit, mantendo os mesmos eventos de sala. A
@@ -244,7 +274,7 @@ mas não oferecem o mesmo SLA de uma hospedagem paga.
 ## 🧱 Arquitetura
 
 ```text
-backend/protocol     Schemas Zod e eventos v2 compartilhados
+backend/protocol     Schemas Zod e eventos v3 compartilhados
 backend/server       Fastify, JWT, WebSocket e repositórios
 frontend/cli         Rust, Ratatui, Crossterm e CPAL
 frontend/desktop     React, Vite e interface responsiva

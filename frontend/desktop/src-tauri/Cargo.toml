@@ -1,6 +1,6 @@
 [package]
 name = "terminal-chat-desktop"
-version = "2.3.2"
+version = "2.4.0"
 description = "Cliente desktop do Terminal Chat"
 authors = ["WKMcode-dev"]
 license = "MIT"

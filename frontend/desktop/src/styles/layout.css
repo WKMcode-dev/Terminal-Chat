@@ -122,7 +122,7 @@
 }
 .target {
   display: grid;
-  grid-template-columns: 18px minmax(0, 1fr) auto;
+  grid-template-columns: 18px minmax(0, 1fr) auto auto;
   align-items: center;
   gap: 10px;
   width: 100%;
@@ -133,6 +133,7 @@
   background: transparent;
   text-align: left;
   transition: 150ms ease;
+  cursor: pointer;
 }
 .target:hover,
 .target.active {
@@ -168,6 +169,27 @@
   background: var(--primary);
   font-size: 0.67rem;
   text-align: center;
+}
+.target-close {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  color: var(--muted);
+  background: transparent;
+  opacity: 0;
+  transition: 150ms ease;
+}
+.target:hover .target-close,
+.target:focus-within .target-close {
+  opacity: 1;
+}
+.target-close:hover {
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
 }
 .list-empty {
   display: grid;

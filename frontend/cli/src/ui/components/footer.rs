@@ -29,7 +29,7 @@ pub fn render_footer(frame: &mut Frame, area: Rect, app: &App, theme: Theme, com
         )
     } else if app.section.is_messaging() {
         format!(
-            "{area_shortcuts}  {bullet}  PgUp/PgDn histórico  {bullet}  Ctrl+C copiar"
+            "{area_shortcuts}  {bullet}  E editar  {bullet}  D excluir  {bullet}  X fechar conversa"
         )
     } else {
         let navigation = if app.settings.glyph_mode == crate::settings::GlyphMode::Ascii {

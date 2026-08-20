@@ -65,8 +65,10 @@ export class PostgresRepository implements Repository {
         recipient_id uuid references users(id) on delete cascade,
         body varchar(4000) not null,
         created_at timestamptz not null default now(),
+        edited_at timestamptz,
         unique (author_id, client_id)
       );
+      alter table messages add column if not exists edited_at timestamptz;
       create table if not exists friendships (
         id uuid primary key,
         requester_id uuid not null references users(id) on delete cascade,
@@ -78,6 +80,13 @@ export class PostgresRepository implements Repository {
       );
       create unique index if not exists friendships_pair_idx
         on friendships (least(requester_id, addressee_id), greatest(requester_id, addressee_id));
+      create table if not exists hidden_conversations (
+        user_id uuid not null references users(id) on delete cascade,
+        contact_id uuid not null references users(id) on delete cascade,
+        hidden_at timestamptz not null default now(),
+        primary key (user_id, contact_id),
+        check (user_id <> contact_id)
+      );
       create index if not exists messages_channel_idx on messages(target_id, created_at);
       create index if not exists messages_direct_idx on messages(author_id, recipient_id, created_at);
     `);
@@ -260,6 +269,31 @@ export class PostgresRepository implements Repository {
     return mapMessage(rows[0] as Row);
   }
 
+  async findMessageById(messageId: string): Promise<StoredMessage | undefined> {
+    const rows = await this
+      .sql`select * from messages where id = ${messageId} limit 1`;
+    return rows[0] ? mapMessage(rows[0] as Row) : undefined;
+  }
+
+  async updateMessage(
+    messageId: string,
+    body: string,
+  ): Promise<StoredMessage | undefined> {
+    const rows = await this.sql`
+      update messages set body = ${body}, edited_at = now()
+      where id = ${messageId}
+      returning *
+    `;
+    return rows[0] ? mapMessage(rows[0] as Row) : undefined;
+  }
+
+  async deleteMessage(messageId: string): Promise<StoredMessage | undefined> {
+    const rows = await this.sql`
+      delete from messages where id = ${messageId} returning *
+    `;
+    return rows[0] ? mapMessage(rows[0] as Row) : undefined;
+  }
+
   async listFriendshipsForUser(userId: string): Promise<StoredFriendship[]> {
     const rows = await this.sql`
       select * from friendships
@@ -267,6 +301,20 @@ export class PostgresRepository implements Repository {
       order by updated_at desc
     `;
     return rows.map((row) => mapFriendship(row as Row));
+  }
+
+  async hasAcceptedFriendship(
+    userId: string,
+    otherUserId: string,
+  ): Promise<boolean> {
+    const rows = await this.sql`
+      select 1 from friendships
+      where status = 'accepted' and (
+        (requester_id = ${userId} and addressee_id = ${otherUserId}) or
+        (requester_id = ${otherUserId} and addressee_id = ${userId})
+      ) limit 1
+    `;
+    return rows.length > 0;
   }
 
   async createFriendRequest(
@@ -354,6 +402,29 @@ export class PostgresRepository implements Repository {
     `;
     return mapFriendship(rows[0] as Row);
   }
+
+  async listHiddenConversationIds(userId: string): Promise<string[]> {
+    const rows = await this.sql`
+      select contact_id from hidden_conversations where user_id = ${userId}
+    `;
+    return rows.map((row) => String(row.contact_id));
+  }
+
+  async showConversation(userId: string, otherUserId: string): Promise<void> {
+    await this.sql`
+      delete from hidden_conversations
+      where user_id = ${userId} and contact_id = ${otherUserId}
+    `;
+  }
+
+  async hideConversation(userId: string, otherUserId: string): Promise<void> {
+    await this.sql`
+      insert into hidden_conversations (user_id, contact_id)
+      values (${userId}, ${otherUserId})
+      on conflict (user_id, contact_id)
+      do update set hidden_at = now()
+    `;
+  }
 }
 
 function mapUser(row: Row): StoredUser {
@@ -401,6 +472,8 @@ function mapMessage(row: Row): StoredMessage {
     createdAt: new Date(String(row.created_at)).toISOString(),
   };
   if (row.recipient_id) message.recipientId = String(row.recipient_id);
+  if (row.edited_at)
+    message.editedAt = new Date(String(row.edited_at)).toISOString();
   return message;
 }
 

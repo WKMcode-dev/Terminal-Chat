@@ -117,10 +117,10 @@ fn render_message_list(
 fn history_hint(focused: bool, glyph_mode: GlyphMode) -> Option<&'static str> {
     focused.then_some(match glyph_mode {
         GlyphMode::Unicode => {
-            " ↑↓ mensagem  •  PgUp/PgDn página  •  Ctrl+C copiar "
+            " ↑↓ mensagem  •  E editar  •  D excluir  •  X fechar conversa  •  Ctrl+C copiar "
         }
         GlyphMode::Ascii => {
-            " Up/Down mensagem  |  PgUp/PgDn página  |  Ctrl+C copiar "
+            " Up/Down mensagem  |  E editar  |  D excluir  |  X fechar conversa "
         }
     })
 }
@@ -148,6 +148,12 @@ fn message_item(
             format!("  {}", message.sent_at),
             Style::default().fg(theme.subtle),
         ));
+    }
+    if message.edited {
+        heading.push(Span::styled("  (editada)", Style::default().fg(theme.subtle)));
+    }
+    if message.pending {
+        heading.push(Span::styled("  enviando…", Style::default().fg(theme.subtle)));
     }
     let mut lines = vec![Line::from(heading)];
     lines.extend(

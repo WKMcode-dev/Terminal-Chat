@@ -5,8 +5,8 @@ use crate::{
     network::RealtimeClient,
     profiles::Profile,
     protocol::{
-        Bootstrap, MessageScope, ServerEvent, SessionReady, WireFriendship, WireMessage,
-        WirePresence, WireUser,
+        Bootstrap, MessageScope, ServerEvent, SessionReady, WireConversation, WireFriendship,
+        VoiceCodec, WireFriendshipStatus, WireMessage, WirePresence, WireUser,
     },
     settings::{self, UserSettings},
     voice::VoiceEngine,
@@ -52,6 +52,8 @@ pub struct App {
     pub profile_search_active: bool,
     pub selected_setting: usize,
     pub selected_message: usize,
+    pub editing_message_id: Option<String>,
+    pub pending_message_delete: Option<String>,
     pub input: InputBuffer,
     pub muted: bool,
     pub deafened: bool,
@@ -66,6 +68,7 @@ pub struct App {
     pub microphone_test_active: bool,
     pub voice_participants: usize,
     pub voice_room_id: Option<String>,
+    pub voice_codec: VoiceCodec,
     pub realtime: Option<RealtimeClient>,
     pub voice: VoiceEngine,
     exit_reason: ExitReason,
@@ -108,6 +111,8 @@ impl Default for App {
             profile_search_active: false,
             selected_setting: 0,
             selected_message,
+            editing_message_id: None,
+            pending_message_delete: None,
             input: InputBuffer::default(),
             muted: false,
             deafened: false,
@@ -122,6 +127,7 @@ impl Default for App {
             microphone_test_active: false,
             voice_participants: 0,
             voice_room_id: None,
+            voice_codec: VoiceCodec::Pcm16,
             realtime: None,
             voice: VoiceEngine::default(),
             exit_reason: ExitReason::Running,
@@ -132,11 +138,16 @@ impl Default for App {
 impl App {
     pub fn from_session(session: SessionReady, realtime: RealtimeClient) -> Self {
         let (settings, notice) = match settings::load() {
-            Ok(settings) => (settings, Some("Conectado ao Terminal Chat v2.3.2".to_owned())),
+            Ok(settings) => (settings, Some("Conectado ao Terminal Chat v2.4.0".to_owned())),
             Err(_) => (
                 UserSettings::default(),
                 Some("Configuração inválida; usando os valores padrão".to_owned()),
             ),
+        };
+        let voice_codec = if session.protocol_version >= 3 {
+            VoiceCodec::Pcm16
+        } else {
+            VoiceCodec::F32
         };
         let mut app = Self {
             self_user_id: session.bootstrap.current_user.id.clone(),
@@ -158,6 +169,8 @@ impl App {
             profile_search_active: false,
             selected_setting: 0,
             selected_message: 0,
+            editing_message_id: None,
+            pending_message_delete: None,
             input: InputBuffer::default(),
             muted: false,
             deafened: false,
@@ -172,6 +185,7 @@ impl App {
             microphone_test_active: false,
             voice_participants: 0,
             voice_room_id: None,
+            voice_codec,
             realtime: Some(realtime),
             voice: VoiceEngine::default(),
             exit_reason: ExitReason::Running,
@@ -216,6 +230,11 @@ impl App {
         match event {
             ServerEvent::SessionReady(session) => {
                 self.connected = true;
+                self.voice_codec = if session.protocol_version >= 3 {
+                    VoiceCodec::Pcm16
+                } else {
+                    VoiceCodec::F32
+                };
                 self.apply_bootstrap(session.bootstrap);
                 self.notice = Some("Conexão restaurada e histórico sincronizado".to_owned());
             }
@@ -229,9 +248,14 @@ impl App {
                 if self.account_dialog == Some(AccountDialog::DeletePending) {
                     self.account_dialog = Some(AccountDialog::DeletePassword);
                 }
+                self.discard_pending_messages();
                 self.notice = Some(error.message);
             }
             ServerEvent::MessageCreated(message) => self.insert_server_message(message),
+            ServerEvent::MessageUpdated(message) => self.update_server_message(message),
+            ServerEvent::MessageDeleted { message_id, .. } => {
+                self.delete_server_message(&message_id)
+            }
             ServerEvent::ChannelCreated(channel) => {
                 if !self.channels.iter().any(|candidate| candidate.id == channel.id) {
                     self.channels.push(Channel::with_id(
@@ -255,6 +279,12 @@ impl App {
                 }
             }
             ServerEvent::FriendshipChanged(friendship) => {
+                let contact_id = if friendship.requester_id == self.self_user_id {
+                    friendship.addressee_id.clone()
+                } else {
+                    friendship.requester_id.clone()
+                };
+                let blocked = friendship.status == WireFriendshipStatus::Blocked;
                 if let Some(existing) = self
                     .friendships
                     .iter_mut()
@@ -263,6 +293,9 @@ impl App {
                     *existing = friendship;
                 } else {
                     self.friendships.push(friendship);
+                }
+                if blocked {
+                    self.remove_conversation(&contact_id);
                 }
             }
             ServerEvent::FriendshipRemoved {
@@ -275,6 +308,18 @@ impl App {
                         || (friendship.requester_id == other_user_id
                             && friendship.addressee_id == user_id))
                 });
+                let contact_id = if user_id == self.self_user_id {
+                    other_user_id
+                } else {
+                    user_id
+                };
+                self.remove_conversation(&contact_id);
+            }
+            ServerEvent::ConversationOpened(conversation) => {
+                self.upsert_conversation(conversation);
+            }
+            ServerEvent::ConversationClosed { contact_id, .. } => {
+                self.remove_conversation(&contact_id);
             }
             ServerEvent::TypingChanged {
                 user_id,
@@ -302,11 +347,12 @@ impl App {
                 room_id,
                 user_id,
                 sample_rate,
+                codec,
                 samples,
             } if self.voice_room_id.as_deref() == Some(room_id.as_str())
                 && user_id != self.self_user_id =>
             {
-                if let Err(error) = self.voice.queue_base64(&samples, sample_rate) {
+                if let Err(error) = self.voice.queue_base64(&samples, sample_rate, codec) {
                     self.notice = Some(format!("Falha ao reproduzir voz: {error}"));
                 }
             }
@@ -381,7 +427,15 @@ impl App {
         match message.scope {
             MessageScope::Channel => {
                 if let Some(channel) = self.channels.iter_mut().find(|channel| channel.id == message.target_id) {
-                    channel.messages.push(message_from_wire(message, &self.self_user_id, None));
+                    let client_id = message.client_id.clone();
+                    let converted = message_from_wire(message, &self.self_user_id, None);
+                    if let Some(existing) = channel.messages.iter_mut().find(|candidate| {
+                        client_id.is_some() && candidate.client_id == client_id
+                    }) {
+                        *existing = converted;
+                    } else {
+                        channel.messages.push(converted);
+                    }
                     self.selected_message = channel.messages.len().saturating_sub(1);
                 }
             }
@@ -391,34 +445,165 @@ impl App {
                 } else {
                     message.author.id.clone()
                 };
+                if !self
+                    .conversations
+                    .iter()
+                    .any(|conversation| conversation.contact.id == contact_id)
+                    && self.is_accepted_friend(&contact_id)
+                    && let Some(profile) = self.profiles.iter().find(|profile| profile.id == contact_id)
+                {
+                    self.conversations.push(Conversation::new(
+                        Contact::with_id(
+                            profile.id.clone(),
+                            profile.display_name.clone(),
+                            profile.handle.clone(),
+                            profile.presence,
+                            profile.activity.clone(),
+                            0,
+                        ),
+                        Vec::new(),
+                    ));
+                }
                 if let Some(conversation) = self
                     .conversations
                     .iter_mut()
                     .find(|conversation| conversation.contact.id == contact_id)
                 {
-                    conversation.messages.push(message_from_wire(
+                    let client_id = message.client_id.clone();
+                    let converted = message_from_wire(
                         message,
                         &self.self_user_id,
                         Some(&contact_id),
-                    ));
+                    );
+                    if let Some(existing) = conversation.messages.iter_mut().find(|candidate| {
+                        client_id.is_some() && candidate.client_id == client_id
+                    }) {
+                        *existing = converted;
+                    } else {
+                        conversation.messages.push(converted);
+                    }
                     self.selected_message = conversation.messages.len().saturating_sub(1);
                 }
             }
         }
     }
 
+    fn update_server_message(&mut self, message: WireMessage) {
+        let message_id = message.id.clone();
+        let direct_contact_id = if message.scope == MessageScope::Direct {
+            Some(if message.author.id == self.self_user_id {
+                message.target_id.clone()
+            } else {
+                message.author.id.clone()
+            })
+        } else {
+            None
+        };
+        let converted = message_from_wire(
+            message,
+            &self.self_user_id,
+            direct_contact_id.as_deref(),
+        );
+        for candidate in self
+            .conversations
+            .iter_mut()
+            .flat_map(|conversation| &mut conversation.messages)
+            .chain(self.channels.iter_mut().flat_map(|channel| &mut channel.messages))
+        {
+            if candidate.id == message_id {
+                *candidate = converted;
+                return;
+            }
+        }
+    }
+
+    fn delete_server_message(&mut self, message_id: &str) {
+        for conversation in &mut self.conversations {
+            conversation.messages.retain(|message| message.id != message_id);
+        }
+        for channel in &mut self.channels {
+            channel.messages.retain(|message| message.id != message_id);
+        }
+        self.reset_message_selection();
+    }
+
+    fn discard_pending_messages(&mut self) {
+        for conversation in &mut self.conversations {
+            conversation.messages.retain(|message| !message.pending);
+        }
+        for channel in &mut self.channels {
+            channel.messages.retain(|message| !message.pending);
+        }
+        self.reset_message_selection();
+    }
+
+    fn upsert_conversation(&mut self, conversation: WireConversation) {
+        let contact_id = conversation.contact.id.clone();
+        let should_activate = self.section == Section::Conversations
+            && self
+                .conversations
+                .get(self.active_conversation)
+                .is_some_and(|candidate| candidate.contact.id == contact_id);
+        let converted = Conversation {
+            contact: contact_from_wire(conversation.contact, conversation.unread),
+            messages: conversation
+                .messages
+                .into_iter()
+                .map(|message| {
+                    message_from_wire(message, &self.self_user_id, Some(&contact_id))
+                })
+                .collect(),
+            is_typing: false,
+        };
+        if let Some(existing) = self
+            .conversations
+            .iter_mut()
+            .find(|candidate| candidate.contact.id == contact_id)
+        {
+            *existing = converted;
+        } else {
+            self.conversations.push(converted);
+        }
+        if should_activate
+            && let Some(index) = self
+            .conversations
+            .iter()
+            .position(|candidate| candidate.contact.id == contact_id)
+        {
+            self.section = Section::Conversations;
+            self.selected_conversation = index;
+            self.active_conversation = index;
+            self.focus = Focus::Composer;
+            self.reset_message_selection();
+        }
+    }
+
+    fn remove_conversation(&mut self, contact_id: &str) {
+        self.conversations
+            .retain(|conversation| conversation.contact.id != contact_id);
+        self.selected_conversation = self
+            .selected_conversation
+            .min(self.conversations.len().saturating_sub(1));
+        self.active_conversation = self
+            .active_conversation
+            .min(self.conversations.len().saturating_sub(1));
+        self.reset_message_selection();
+    }
+
+    fn is_accepted_friend(&self, contact_id: &str) -> bool {
+        self.friendships.iter().any(|friendship| {
+            friendship.status == WireFriendshipStatus::Accepted
+                && ((friendship.requester_id == self.self_user_id
+                    && friendship.addressee_id == contact_id)
+                    || (friendship.addressee_id == self.self_user_id
+                        && friendship.requester_id == contact_id))
+        })
+    }
+
     fn update_user(&mut self, user: WireUser) {
         let presence = presence_from_wire(user.presence);
         if !self.profiles.iter().any(|profile| profile.id == user.id) {
             self.profiles.push(profile_from_wire(user.clone(), &self.self_user_id));
-        }
-        if user.id != self.self_user_id
-            && !self
-                .conversations
-                .iter()
-                .any(|conversation| conversation.contact.id == user.id)
-        {
-            self.conversations.push(Conversation::new(contact_from_wire(user.clone(), 0), Vec::new()));
         }
         if let Some(profile) = self.profiles.iter_mut().find(|profile| profile.id == user.id) {
             profile.display_name = user.display_name.clone();
@@ -515,6 +700,7 @@ fn profile_from_wire(user: WireUser, self_user_id: &str) -> Profile {
 }
 
 fn message_from_wire(message: WireMessage, self_user_id: &str, direct_contact_id: Option<&str>) -> ChatMessage {
+    let edited = message.edited_at.is_some();
     let author = if message.author.id == self_user_id {
         MessageAuthor::Me
     } else if direct_contact_id == Some(message.author.id.as_str()) {
@@ -524,10 +710,12 @@ fn message_from_wire(message: WireMessage, self_user_id: &str, direct_contact_id
     };
     ChatMessage::from_server(
         message.id,
+        message.client_id,
         message.author.id,
         author,
         message.body,
         format_time(&message.created_at),
+        edited,
     )
 }
 

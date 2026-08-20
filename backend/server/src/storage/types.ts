@@ -25,6 +25,7 @@ export interface StoredMessage {
   recipientId?: string;
   body: string;
   createdAt: string;
+  editedAt?: string;
 }
 
 export type StoredFriendship = Friendship;
@@ -85,7 +86,14 @@ export interface Repository {
     limit: number,
   ): Promise<StoredMessage[]>;
   createMessage(input: CreateMessageInput): Promise<StoredMessage>;
+  findMessageById(messageId: string): Promise<StoredMessage | undefined>;
+  updateMessage(
+    messageId: string,
+    body: string,
+  ): Promise<StoredMessage | undefined>;
+  deleteMessage(messageId: string): Promise<StoredMessage | undefined>;
   listFriendshipsForUser(userId: string): Promise<StoredFriendship[]>;
+  hasAcceptedFriendship(userId: string, otherUserId: string): Promise<boolean>;
   createFriendRequest(
     requesterId: string,
     addresseeId: string,
@@ -97,6 +105,9 @@ export interface Repository {
   ): Promise<StoredFriendship | undefined>;
   removeFriendship(userId: string, otherUserId: string): Promise<boolean>;
   blockUser(userId: string, otherUserId: string): Promise<StoredFriendship>;
+  listHiddenConversationIds(userId: string): Promise<string[]>;
+  showConversation(userId: string, otherUserId: string): Promise<void>;
+  hideConversation(userId: string, otherUserId: string): Promise<void>;
 }
 
 export function toPublicUser(user: StoredUser): PublicUser {
@@ -117,5 +128,6 @@ export function toChatMessage(
     createdAt: message.createdAt,
   };
   if (message.clientId) result.clientId = message.clientId;
+  if (message.editedAt) result.editedAt = message.editedAt;
   return result;
 }

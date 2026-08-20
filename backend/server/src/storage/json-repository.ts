@@ -26,6 +26,7 @@ interface JsonState {
   }>;
   messages: StoredMessage[];
   friendships: StoredFriendship[];
+  hiddenConversations: Array<{ userId: string; contactId: string }>;
 }
 
 const EMPTY_STATE: JsonState = {
@@ -34,6 +35,7 @@ const EMPTY_STATE: JsonState = {
   channelMembers: [],
   messages: [],
   friendships: [],
+  hiddenConversations: [],
 };
 
 export class JsonRepository implements Repository {
@@ -117,6 +119,10 @@ export class JsonRepository implements Repository {
     this.state.friendships = this.state.friendships.filter(
       (friendship) =>
         friendship.requesterId !== userId && friendship.addresseeId !== userId,
+    );
+    this.state.hiddenConversations = this.state.hiddenConversations.filter(
+      (conversation) =>
+        conversation.userId !== userId && conversation.contactId !== userId,
     );
     await this.persist();
     return true;
@@ -240,6 +246,36 @@ export class JsonRepository implements Repository {
     return structuredClone(message);
   }
 
+  async findMessageById(messageId: string): Promise<StoredMessage | undefined> {
+    return clone(
+      this.state.messages.find((message) => message.id === messageId),
+    );
+  }
+
+  async updateMessage(
+    messageId: string,
+    body: string,
+  ): Promise<StoredMessage | undefined> {
+    const message = this.state.messages.find(
+      (candidate) => candidate.id === messageId,
+    );
+    if (!message) return undefined;
+    message.body = body;
+    message.editedAt = new Date().toISOString();
+    await this.persist();
+    return structuredClone(message);
+  }
+
+  async deleteMessage(messageId: string): Promise<StoredMessage | undefined> {
+    const index = this.state.messages.findIndex(
+      (message) => message.id === messageId,
+    );
+    if (index < 0) return undefined;
+    const [message] = this.state.messages.splice(index, 1);
+    await this.persist();
+    return message ? structuredClone(message) : undefined;
+  }
+
   async listFriendshipsForUser(userId: string): Promise<StoredFriendship[]> {
     return structuredClone(
       this.state.friendships.filter(
@@ -247,6 +283,17 @@ export class JsonRepository implements Repository {
           friendship.requesterId === userId ||
           friendship.addresseeId === userId,
       ),
+    );
+  }
+
+  async hasAcceptedFriendship(
+    userId: string,
+    otherUserId: string,
+  ): Promise<boolean> {
+    return this.state.friendships.some(
+      (friendship) =>
+        friendship.status === "accepted" &&
+        includesUsers(friendship, userId, otherUserId),
     );
   }
 
@@ -341,6 +388,38 @@ export class JsonRepository implements Repository {
     return structuredClone(friendship);
   }
 
+  async listHiddenConversationIds(userId: string): Promise<string[]> {
+    return this.state.hiddenConversations
+      .filter((conversation) => conversation.userId === userId)
+      .map((conversation) => conversation.contactId);
+  }
+
+  async showConversation(userId: string, otherUserId: string): Promise<void> {
+    const previousLength = this.state.hiddenConversations.length;
+    this.state.hiddenConversations = this.state.hiddenConversations.filter(
+      (conversation) =>
+        !(
+          conversation.userId === userId &&
+          conversation.contactId === otherUserId
+        ),
+    );
+    if (this.state.hiddenConversations.length !== previousLength)
+      await this.persist();
+  }
+
+  async hideConversation(userId: string, otherUserId: string): Promise<void> {
+    if (
+      !this.state.hiddenConversations.some(
+        (conversation) =>
+          conversation.userId === userId &&
+          conversation.contactId === otherUserId,
+      )
+    ) {
+      this.state.hiddenConversations.push({ userId, contactId: otherUserId });
+      await this.persist();
+    }
+  }
+
   private async ensureGeneralChannel(): Promise<void> {
     let changed = false;
     if (this.state.channels.length === 0) {
@@ -405,6 +484,9 @@ function parseState(raw: string): JsonState {
       : [],
     messages: parsed.messages,
     friendships: Array.isArray(parsed.friendships) ? parsed.friendships : [],
+    hiddenConversations: Array.isArray(parsed.hiddenConversations)
+      ? parsed.hiddenConversations
+      : [],
   };
 }
 

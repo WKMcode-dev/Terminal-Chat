@@ -174,10 +174,10 @@ fn relationship_label(relationship: &ProfileRelationship) -> &'static str {
 fn relationship_actions(relationship: &ProfileRelationship) -> &'static str {
     match relationship {
         ProfileRelationship::CurrentUser => "Edite nome, bio, avatar e atividade no desktop.",
-        ProfileRelationship::None => "[A] Adicionar  [M] Mensagem  [F4] Chamar  [B] Bloquear",
-        ProfileRelationship::PendingOutgoing => "[R] Cancelar solicitação  [M] Mensagem",
+        ProfileRelationship::None => "[A] Adicionar  [B] Bloquear",
+        ProfileRelationship::PendingOutgoing => "[R] Cancelar solicitação  [B] Bloquear",
         ProfileRelationship::PendingIncoming { .. } => {
-            "[A] Aceitar  [R] Recusar  [M] Mensagem  [B] Bloquear"
+            "[A] Aceitar  [R] Recusar  [B] Bloquear"
         }
         ProfileRelationship::Friends => "[M] Mensagem  [F4] Chamar  [R] Remover  [B] Bloquear",
         ProfileRelationship::Blocked => "[B] ou [R] Desbloquear",
