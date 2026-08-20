@@ -27,6 +27,21 @@ function Invoke-ReleaseStep {
   }
 }
 
+function Get-PortableSha256 {
+  param([string]$Path)
+
+  $algorithm = [System.Security.Cryptography.SHA256]::Create()
+  $stream = [System.IO.File]::OpenRead($Path)
+  try {
+    $bytes = $algorithm.ComputeHash($stream)
+    return [System.BitConverter]::ToString($bytes).Replace("-", "").ToLowerInvariant()
+  }
+  finally {
+    $stream.Dispose()
+    $algorithm.Dispose()
+  }
+}
+
 Push-Location $projectRoot
 try {
   if (-not $SkipInstall) {
@@ -92,7 +107,7 @@ try {
     Where-Object Name -ne "SHA256SUMS.txt" |
     Sort-Object Name |
     ForEach-Object {
-      $hash = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+      $hash = Get-PortableSha256 -Path $_.FullName
       "$hash  $($_.Name)"
     }
   Set-Content -LiteralPath (Join-Path $releaseDirectory "SHA256SUMS.txt") -Value $hashLines -Encoding utf8

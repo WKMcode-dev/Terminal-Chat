@@ -74,6 +74,7 @@ for (const source of versionedSources) {
 }
 
 const devScript = read("scripts/dev.mjs");
+const windowsReleaseScript = read("scripts/package-windows.ps1");
 const cliSession = read("frontend/cli/src/session.rs");
 const desktopServerConfig = read(
   "frontend/desktop/src/services/serverConfig.ts",
@@ -91,6 +92,11 @@ requireCondition(
 requireCondition(
   desktopServerConfig.includes(`DEFAULT_SERVER = "${officialHttpUrl}"`),
   "o desktop não aponta por padrão para o servidor oficial",
+);
+requireCondition(
+  windowsReleaseScript.includes("System.Security.Cryptography.SHA256") &&
+    !windowsReleaseScript.includes("Get-FileHash"),
+  "o empacotamento precisa calcular SHA-256 sem depender do cmdlet Get-FileHash",
 );
 
 const tauriConfig = readJson("frontend/desktop/src-tauri/tauri.conf.json");
