@@ -76,7 +76,11 @@ impl Default for UserSettings {
 
 impl UserSettings {
     pub const ROW_COUNT: usize = 7;
-    const THEMES: [&'static str; 3] = ["Kitsune Night", "Notion Dark", "Notion Light"];
+    const THEMES: [&'static str; 3] = [
+        "Kitsune Core",
+        "Grafite Orbital",
+        "Sinal Claro",
+    ];
 
     pub fn row(&self, index: usize) -> (&'static str, String, &'static str) {
         match index {

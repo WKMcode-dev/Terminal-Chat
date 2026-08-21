@@ -98,6 +98,11 @@ requireCondition(
     !windowsReleaseScript.includes("Get-FileHash"),
   "o empacotamento precisa calcular SHA-256 sem depender do cmdlet Get-FileHash",
 );
+requireCondition(
+  windowsReleaseScript.includes("terminal-chat-desktop.exe") &&
+    windowsReleaseScript.includes("Windows-x64-Portable.exe"),
+  "o empacotamento precisa publicar também o executável portátil do desktop",
+);
 
 const tauriConfig = readJson("frontend/desktop/src-tauri/tauri.conf.json");
 const targets = Array.isArray(tauriConfig.bundle?.targets)

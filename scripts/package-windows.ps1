@@ -101,6 +101,13 @@ try {
     }
     $installerName = "Terminal-Chat-Desktop-v$version-Windows-x64-Setup.exe"
     Copy-Item -LiteralPath $installer.FullName -Destination (Join-Path $releaseDirectory $installerName)
+
+    $desktopExecutable = Join-Path $projectRoot "frontend\desktop\src-tauri\target\release\terminal-chat-desktop.exe"
+    if (-not (Test-Path -LiteralPath $desktopExecutable)) {
+      throw "O executável portátil do desktop não foi encontrado em $desktopExecutable."
+    }
+    $portableDesktopName = "Terminal-Chat-Desktop-v$version-Windows-x64-Portable.exe"
+    Copy-Item -LiteralPath $desktopExecutable -Destination (Join-Path $releaseDirectory $portableDesktopName)
   }
 
   $hashLines = Get-ChildItem -LiteralPath $releaseDirectory -File |

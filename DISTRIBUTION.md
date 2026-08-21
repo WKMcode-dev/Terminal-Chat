@@ -12,7 +12,17 @@ Ele instala o Terminal Chat no perfil atual do Windows, cria os atalhos e
 baixa o WebView2 automaticamente caso o computador ainda não o possua. Não é
 necessário instalar Node.js, Rust, banco de dados ou criar `.env`.
 
-Quem prefere o terminal pode baixar o pacote portátil:
+Quem prefere executar a interface desktop sem instalação pode baixar:
+
+```text
+Terminal-Chat-Desktop-vX.Y.Z-Windows-x64-Portable.exe
+```
+
+Esse arquivo não cria atalhos nem instala componentes. Ele funciona diretamente
+quando o Microsoft Edge WebView2 já está presente; caso contrário, utilize o
+Setup recomendado acima.
+
+Quem prefere usar o terminal pode baixar o pacote portátil:
 
 ```text
 Terminal-Chat-CLI-vX.Y.Z-Windows-x64.zip
@@ -58,8 +68,8 @@ npm run release:windows
 
 O processo faz instalação limpa, valida versões e URLs, audita dependências de
 produção, executa testes e typechecks, compila a CLI em release, gera o
-instalador NSIS do Tauri e calcula os hashes SHA-256. Os arquivos finais ficam
-em:
+instalador NSIS, copia o executável portátil do desktop e calcula os hashes
+SHA-256. Os arquivos finais ficam em:
 
 ```text
 artifacts\windows\vX.Y.Z
@@ -74,7 +84,7 @@ para que as versões Rust usadas em builds futuros permaneçam fixadas.
 O workflow **Windows Release** também compila em um Windows oficial do GitHub:
 
 1. em **Actions → Windows Release**, use **Run workflow** para um teste;
-2. baixe os artifacts gerados e teste o instalador e a CLI;
+2. baixe os artifacts gerados e teste o instalador, o desktop portátil e a CLI;
 3. quando estiver aprovado, publique uma tag com a mesma versão do projeto:
 
 ```powershell
@@ -82,7 +92,8 @@ git tag vX.Y.Z
 git push origin vX.Y.Z
 ```
 
-O workflow cria a Release e anexa o instalador desktop e o ZIP portátil da CLI.
+O workflow cria a Release e anexa o instalador desktop, o executável portátil
+do desktop, o ZIP portátil da CLI e o arquivo de hashes.
 
 Na atualização 2.4.0, publique primeiro o servidor e só depois distribua os
 novos clientes. O servidor v3 aceita clientes 2.3.2 durante a transição; os
@@ -99,5 +110,6 @@ As migrações do Neon são automáticas, não apagam histórico e não armazena
 - teste envio, edição, exclusão, fechamento e reabertura de conversa;
 - remova a amizade e confirme que a conversa desaparece para os dois lados;
 - teste microfone, retorno local e chamada entre dois computadores;
+- abra também o desktop portátil em um computador que já possua WebView2;
 - confirme que a tela de login mostra `terminal-chat-6pet.onrender.com`;
 - compare os hashes dos arquivos publicados.

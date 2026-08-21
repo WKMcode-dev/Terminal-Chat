@@ -49,7 +49,7 @@ jobs:
       - name: Executar typecheck
         run: npm run typecheck
 
-      - name: Gerar instalador desktop e CLI portátil
+      - name: Gerar instalador, desktop portátil e CLI portátil
         run: npm run release:windows -- -SkipInstall -SkipChecks
 
       - name: Publicar artifacts do workflow

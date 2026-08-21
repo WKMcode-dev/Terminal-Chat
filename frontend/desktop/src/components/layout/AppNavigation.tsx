@@ -30,9 +30,12 @@ export function AppNavigation({
 }: AppNavigationProps) {
   return (
     <nav className="app-navigation" aria-label="Áreas do aplicativo">
-      <div className="mini-brand">TC</div>
+      <div className="mini-brand" aria-label="Terminal Chat">
+        <span>TC</span>
+        <small>LINK</small>
+      </div>
       <div className="nav-items">
-        {items.map(({ id, label, icon: Icon }) => (
+        {items.map(({ id, label, icon: Icon }, index) => (
           <button
             aria-current={current === id ? "page" : undefined}
             className={current === id ? "nav-button active" : "nav-button"}
@@ -41,24 +44,40 @@ export function AppNavigation({
             title={label}
             type="button"
           >
-            <Icon size={21} />
-            <span>{label}</span>
+            <span className="nav-index" aria-hidden="true">
+              {String(index + 1).padStart(2, "0")}
+            </span>
+            <span className="nav-icon" aria-hidden="true">
+              <Icon size={20} strokeWidth={1.8} />
+            </span>
+            <span className="nav-label">{label}</span>
           </button>
         ))}
       </div>
-      <div
-        className={connected ? "connection-dot online" : "connection-dot"}
-        title={connected ? "Online" : "Reconectando"}
-      />
-      <button
-        className="nav-button logout"
-        onClick={onLogout}
-        title="Sair"
-        type="button"
-      >
-        <LogOut size={20} />
-        <span>Sair</span>
-      </button>
+      <div className="nav-footer">
+        <div
+          className={
+            connected ? "connection-status online" : "connection-status"
+          }
+          role="status"
+          title={connected ? "Online" : "Reconectando"}
+        >
+          <span className="connection-dot" />
+          <span>{connected ? "Online" : "Conectando"}</span>
+        </div>
+        <button
+          aria-label="Sair"
+          className="nav-button logout"
+          onClick={onLogout}
+          title="Sair"
+          type="button"
+        >
+          <span className="nav-icon" aria-hidden="true">
+            <LogOut size={19} strokeWidth={1.8} />
+          </span>
+          <span className="nav-label">Sair</span>
+        </button>
+      </div>
     </nav>
   );
 }

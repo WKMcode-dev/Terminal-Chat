@@ -1,4 +1,4 @@
-# 💬 Terminal Chat v2.4.1
+# 💬 Terminal Chat v2.5.0
 
 Chat em tempo real com dois clientes: uma interface completa no terminal e um
 aplicativo desktop em Tauri. Ambos usam o mesmo servidor, as mesmas contas, os
@@ -29,7 +29,8 @@ mesmos canais, o mesmo histórico e as mesmas salas de voz.
 - abertura de conversas e chamadas diretamente pelos perfis;
 - seletor interno de emojis no terminal e no desktop;
 - interface CLI responsiva, UTF-8 e compatível com teclado ABNT2;
-- interface desktop responsiva com três paletas e controle de animações;
+- interface desktop responsiva em estilo sci-fi, com três paletas e controle de
+  animações;
 - recuperação visível de erros do Tauri, sem permanecer em uma tela preta;
 - seleção do servidor local ou hospedado diretamente na tela de login;
 - persistência local pronta para uso ou PostgreSQL para implantação;
@@ -39,12 +40,13 @@ mesmos canais, o mesmo histórico e as mesmas salas de voz.
 ## 📦 Instalar para usar
 
 Amigos e usuários finais não precisam receber o código-fonte nem instalar
-Node.js ou Rust. A página **Releases** do GitHub oferece dois arquivos:
+Node.js ou Rust. A página **Releases** do GitHub oferece três pacotes principais:
 
 - instalador desktop `Terminal-Chat-Desktop-...-Setup.exe`;
+- desktop portátil `Terminal-Chat-Desktop-...-Portable.exe`;
 - CLI portátil `Terminal-Chat-CLI-...zip`.
 
-Os dois já apontam para o servidor oficial e funcionam sem `.env`. Consulte
+Todos já apontam para o servidor oficial e funcionam sem `.env`. Consulte
 [DISTRIBUTION.md](DISTRIBUTION.md) para instalação, hashes, SmartScreen e o
 checklist de teste antes de publicar uma versão.
 
@@ -251,7 +253,7 @@ associação ao canal; salas diretas exigem uma amizade aceita.
 
 Durante a transição, o protocolo negocia o codec e o servidor converte o áudio
 para clientes 2.3.2 ainda conectados. Para obter a economia completa, atualize
-todos os clientes para a versão 2.4.1.
+todos os clientes para a versão 2.5.0.
 
 Para produção pública ou grupos muito grandes, a evolução recomendada é trocar o
 transporte PCM por Opus/WebRTC ou LiveKit, mantendo os mesmos eventos de sala. A
@@ -324,7 +326,7 @@ Para gerar o instalador desktop:
 npm run release:windows
 ```
 
-O comando executa a validação completa e grava o instalador NSIS, a CLI portátil
-e os hashes SHA-256 em `artifacts\windows\vX.Y.Z`. O workflow **Windows
-Release** executa o mesmo processo no GitHub Actions e publica os arquivos ao
-receber uma tag `vX.Y.Z`.
+O comando executa a validação completa e grava o instalador NSIS, o desktop
+portátil, a CLI portátil e os hashes SHA-256 em
+`artifacts\windows\vX.Y.Z`. O workflow **Windows Release** executa o mesmo
+processo no GitHub Actions e publica os arquivos ao receber uma tag `vX.Y.Z`.

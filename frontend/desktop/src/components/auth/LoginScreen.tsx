@@ -61,7 +61,7 @@ export function LoginScreen({ onAuthenticated }: LoginScreenProps) {
         <div className="brand-mark">
           <Radio size={26} />
         </div>
-        <p className="eyebrow">Terminal Chat v2.4.1</p>
+        <p className="eyebrow">Terminal Chat v2.5.0</p>
         <h1 id="auth-title">
           {registering ? "Crie sua conta" : "Bem-vindo de volta"}
         </h1>

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { AccountSettings } from "./AccountSettings";
 
 interface Preferences {
-  theme: "kitsune" | "notion-dark" | "notion-light";
+  theme: "kitsune-core" | "orbital-dark" | "orbital-light";
   notifications: boolean;
   sounds: boolean;
   animations: boolean;
@@ -48,15 +48,15 @@ export function SettingsPanel({
         <p className="eyebrow">Seu espaço</p>
         <h1>Configurações</h1>
         <p>
-          Preferências locais, compartilhando a mesma linguagem visual do
-          terminal.
+          Ajuste a interface, os alertas e o movimento do seu terminal de
+          comunicação.
         </p>
       </header>
       <div className="settings-group">
         <Setting
           icon={<Palette size={19} />}
           title="Paleta da interface"
-          description="Escolha uma tonalidade minimalista."
+          description="Escolha o perfil visual do seu painel."
         >
           <select
             onChange={(event) =>
@@ -64,9 +64,9 @@ export function SettingsPanel({
             }
             value={preferences.theme}
           >
-            <option value="kitsune">Kitsune Night</option>
-            <option value="notion-dark">Notion Dark</option>
-            <option value="notion-light">Notion Light</option>
+            <option value="kitsune-core">Kitsune Core</option>
+            <option value="orbital-dark">Grafite Orbital</option>
+            <option value="orbital-light">Sinal Claro</option>
           </select>
         </Setting>
         <Setting
@@ -161,18 +161,18 @@ function loadPreferences(): Preferences {
       localStorage.getItem("terminal-chat-preferences") ?? "{}",
     ) as Partial<Preferences>;
     return {
-      theme: ["kitsune", "notion-dark", "notion-light"].includes(
+      theme: ["kitsune-core", "orbital-dark", "orbital-light"].includes(
         value.theme ?? "",
       )
         ? (value.theme as Preferences["theme"])
-        : "kitsune",
+        : "kitsune-core",
       notifications: value.notifications ?? true,
       sounds: value.sounds ?? true,
       animations: value.animations ?? true,
     };
   } catch {
     return {
-      theme: "kitsune",
+      theme: "kitsune-core",
       notifications: true,
       sounds: true,
       animations: true,

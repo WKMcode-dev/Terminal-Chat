@@ -1,5 +1,24 @@
 # Histórico de versões
 
+## 2.5.0
+
+- adota uma linguagem visual sci-fi com painéis técnicos, recortes assimétricos,
+  linhas de sinal, brilho controlado e fundos em grade;
+- reorganiza cada item da navegação em zonas fixas para índice, ícone e rótulo,
+  corrigindo o desalinhamento de **Configurações**;
+- substitui os temas visuais por **Kitsune Core**, **Grafite Orbital** e
+  **Sinal Claro**, com a mesma identidade entre desktop e CLI;
+- consolida os breakpoints em 1180, 960, 720, 520 e 380 px, transforma a barra
+  lateral em navegação superior compacta e preserva os rótulos em telas menores;
+- reorganiza conversas, voz, compositor, perfis, preferências e ações da conta
+  para impedir estouros horizontais e manter controles acessíveis no celular;
+- reduz a janela mínima do desktop para 680 × 520 px com o layout compacto já
+  ativo nessa dimensão;
+- mantém rolagem apenas nos painéis necessários, sem criar rolagem horizontal
+  global na janela do Tauri;
+- publica o desktop tanto como instalador NSIS quanto como executável portátil,
+  mantendo também o pacote portátil da CLI e os hashes SHA-256.
+
 ## 2.4.1
 
 - corrige a falha `1 is not a function` ao alternar entre Conversas, Canais,
