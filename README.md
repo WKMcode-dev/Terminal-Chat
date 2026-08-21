@@ -1,4 +1,4 @@
-# 💬 Terminal Chat v2.4.0
+# 💬 Terminal Chat v2.4.1
 
 Chat em tempo real com dois clientes: uma interface completa no terminal e um
 aplicativo desktop em Tauri. Ambos usam o mesmo servidor, as mesmas contas, os
@@ -251,7 +251,7 @@ associação ao canal; salas diretas exigem uma amizade aceita.
 
 Durante a transição, o protocolo negocia o codec e o servidor converte o áudio
 para clientes 2.3.2 ainda conectados. Para obter a economia completa, atualize
-todos os clientes para a versão 2.4.0.
+todos os clientes para a versão 2.4.1.
 
 Para produção pública ou grupos muito grandes, a evolução recomendada é trocar o
 transporte PCM por Opus/WebRTC ou LiveKit, mantendo os mesmos eventos de sala. A

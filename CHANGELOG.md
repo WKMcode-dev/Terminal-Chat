@@ -1,5 +1,13 @@
 # Histórico de versões
 
+## 2.4.1
+
+- corrige a falha `1 is not a function` ao alternar entre Conversas, Canais,
+  Perfis e Configurações no aplicativo desktop;
+- impede que retornos nativos do `scrollIntoView` no WebView2 sejam tratados
+  pelo React como funções de limpeza de efeitos;
+- adiciona teste de regressão específico para a navegação no desktop Tauri.
+
 ## 2.4.0
 
 - restringe conversas diretas, mensagens, digitação e voz a amizades aceitas;

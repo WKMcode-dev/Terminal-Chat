@@ -4,6 +4,7 @@ import { Pencil, SendHorizontal, SmilePlus, Trash2 } from "lucide-react";
 import type { ChatMessage, PublicUser } from "@terminal-chat/protocol";
 
 import { EmojiPicker } from "./EmojiPicker";
+import { scrollMessageListToBottom } from "./scrollMessageList";
 
 interface ChatPanelProps {
   title: string;
@@ -33,10 +34,11 @@ export function ChatPanel({
   const bottom = useRef<HTMLDivElement>(null);
   const composer = useRef<HTMLTextAreaElement>(null);
 
-  useEffect(
-    () => bottom.current?.scrollIntoView({ behavior: "smooth" }),
-    [messages.length],
-  );
+  useEffect(() => {
+    // WebView2 can expose a numeric native return value here. An implicit
+    // return would make React treat that number as this effect's cleanup.
+    scrollMessageListToBottom(bottom.current);
+  }, [messages.length]);
 
   function submit(event: FormEvent) {
     event.preventDefault();

@@ -1,11 +1,11 @@
 {
   "name": "terminal-chat",
-  "version": "2.4.0",
+  "version": "2.4.1",
   "description": "Chat multiplataforma em tempo real para terminal e desktop",
   "main": "index.js",
   "scripts": {
     "pretest": "npm run build:protocol",
-    "test": "run-s test:protocol test:server test:cli",
+    "test": "run-s test:protocol test:server test:desktop test:cli",
     "audit:production": "npm audit --omit=dev --audit-level=moderate",
     "predev": "npm run build --workspace=@terminal-chat/protocol",
     "dev": "node scripts/dev.mjs",
@@ -30,6 +30,7 @@
     "typecheck:cli": "cargo check --manifest-path frontend/cli/Cargo.toml",
     "test:protocol": "npm run test --workspace=@terminal-chat/protocol",
     "test:server": "npm run test --workspace=@terminal-chat/server",
+    "test:desktop": "npm run test --workspace=@terminal-chat/desktop",
     "test:cli": "cargo test --manifest-path frontend/cli/Cargo.toml",
     "format": "run-s format:typescript format:rust",
     "format:typescript": "prettier --write .",

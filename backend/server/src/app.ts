@@ -84,7 +84,7 @@ export async function buildServer(
     await repository.healthCheck();
     return {
       status: "ok",
-      version: "2.4.0",
+      version: "2.4.1",
       protocol: PROTOCOL_VERSION,
       storage: repository.kind,
     };

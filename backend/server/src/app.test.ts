@@ -22,7 +22,7 @@ describe("Terminal Chat server", () => {
     expect(health.statusCode).toBe(200);
     expect(health.json()).toMatchObject({
       status: "ok",
-      version: "2.4.0",
+      version: "2.4.1",
       protocol: 3,
       storage: "json",
     });

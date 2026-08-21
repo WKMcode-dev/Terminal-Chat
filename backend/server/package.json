@@ -1,6 +1,6 @@
 {
   "name": "@terminal-chat/server",
-  "version": "2.4.0",
+  "version": "2.4.1",
   "description": "Servidor autenticado em tempo real do Terminal Chat",
   "main": "index.js",
   "scripts": {
